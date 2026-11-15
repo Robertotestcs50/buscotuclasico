@@ -1,3 +1,3 @@
 User-agent: *
 Allow: /
-Sitemap: https://buscotucoche.com/sitemap.xml
+Sitemap: https://www.buscotucoche.com/sitemap.xml

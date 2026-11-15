@@ -1,9 +1,5 @@
 # Busco Tu Coche — web
 
-Identidad: el nombre es una frase, «Busco ▭ tu coche», y el hueco es el coche. Tipografías Imbue (titulares)
-y Albert Sans (texto), alojadas en la propia web. Colores: tiza #eeecea, hormigón #e4e1dd, piedra #cdc3b6,
-carbón #2b2a29 y verde carreras #4f5e48 (la acción).
-
 Web estática, rápida y sin dependencias, lista para GitHub Pages.
 
 ## Estructura
@@ -11,7 +7,8 @@ Web estática, rápida y sin dependencias, lista para GitHub Pages.
 - `docs/` — la web ya generada. Es lo que publica GitHub Pages.
 - `build.py` — genera `docs/`. Aquí están los textos, los coches y los datos de contacto.
 - `assets/` — estilos, código, tipografía y fotos (`assets/img/`, ver su README).
-- `make_single.py` — genera una copia de toda la web en un solo HTML para enseñarla (`python3 build.py --preview && python3 make_single.py`).
+- `scenes.py` — dibuja las ilustraciones de los coches (carrocería, color y paisaje del país de origen).
+  Si pones una foto real con el nombre indicado en `assets/img/README.md`, la web la usa en lugar del dibujo.
 - `data/stock.json` — coches en stock (lista vacía `[]` = página de stock sin coches).
 
 ## Cambiar algo
@@ -38,7 +35,7 @@ Ejemplo de coche en `data/stock.json`:
 
 ## Dominios
 
-La web usa **buscotucoche.com** como dominio principal (ya configurado en `build.py`, con su `CNAME`,
+La web usa **www.buscotucoche.com** como dominio principal (buscotucoche.com redirige solo a www) (ya configurado en `build.py`, con su `CNAME`,
 `sitemap.xml` y `robots.txt`). GitHub Pages solo admite un dominio por web, así que **buscotuclasico.com**
 se redirige al principal.
 

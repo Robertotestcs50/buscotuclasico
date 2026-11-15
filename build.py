@@ -24,7 +24,7 @@ OUT = os.path.join(ROOT, "preview" if PREVIEW else "docs")
 # CONFIGURACIÓN
 # =====================================================================
 BRAND = "Busco Tu Coche"
-DOMAIN = "buscotucoche.com"      # dominio principal (sin https). buscotuclasico.com redirige aquí desde el proveedor del dominio
+DOMAIN = "www.buscotucoche.com"      # dominio principal (sin https). buscotuclasico.com redirige aquí desde el proveedor del dominio
 PHONE_DISPLAY = "+34 629 61 76 93"
 PHONE_TEL = "+34629617693"
 WHATSAPP = "34629617693"
