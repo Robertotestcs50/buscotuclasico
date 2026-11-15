@@ -54,12 +54,12 @@ Si preferís que el principal sea buscotuclasico.com, cambia `DOMAIN` en `build.
 ## Recibir los formularios en el correo (opcional)
 
 Sin configurar nada, los formularios abren WhatsApp con la solicitud ya escrita.
-Para recibirlos también por email: crea un formulario gratis en formspree.io con `info@buscotucoche.es`,
+Para recibirlos también por email: crea un formulario gratis en formspree.io con `info@buscamostucoche.com`,
 copia su dirección (`https://formspree.io/f/xxxxxxx`) en `FORM_ENDPOINT` dentro de `build.py` y vuelve a generar.
 
 ## Pendiente antes de publicar
 
 - Rellenar los datos marcados en amarillo en Aviso legal y Política de privacidad (razón social, NIF, dirección).
 - Las fotos de los coches son reales (Wikimedia Commons). Mantener la página de créditos; si tenéis fotos propias, se pueden sustituir (ver `assets/img/README.md`).
-- Confirmar el email: la web usa `info@buscotucoche.es` (como el prototipo). Si el dominio es .com, crear `info@buscotucoche.com` y cambiarlo en `build.py`.
+- Email de contacto: `info@buscamostucoche.com`. Comprobar que el buzón existe y recibe correo (está en `EMAIL`, dentro de `build.py`).
 - Añadir enlaces de Instagram y Facebook cuando existan.
