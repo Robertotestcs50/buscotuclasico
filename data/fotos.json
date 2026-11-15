@@ -1,0 +1,234 @@
+[
+ {
+  "file": "car-mercedes-e500.jpg",
+  "coche": "Mercedes-Benz E 500 (W124)",
+  "page": "https://commons.wikimedia.org/wiki/File:Mercedes-Benz_E_500_LTD,_Techno-Classica_2018,_Essen_(IMG_9804).jpg",
+  "artist": "Matti Blume",
+  "lic": "CC BY-SA 4.0",
+  "licurl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ {
+  "file": "car-bmw-325.jpg",
+  "coche": "BMW 325i E30",
+  "page": "https://commons.wikimedia.org/wiki/File:BMW_325i_Racing_(5463656688).jpg",
+  "artist": "nakhon100",
+  "lic": "CC BY 2.0",
+  "licurl": "https://creativecommons.org/licenses/by/2.0"
+ },
+ {
+  "file": "car-skyline.jpg",
+  "coche": "Nissan Skyline R34 GT-R",
+  "page": "https://commons.wikimedia.org/wiki/File:2001_Nissan_Skyline_GT-R_V-Spec_II_R34_(79241).jpg",
+  "artist": "Calreyn88",
+  "lic": "CC BY-SA 4.0",
+  "licurl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ {
+  "file": "car-supra.jpg",
+  "coche": "Toyota Supra MK4 Turbo",
+  "page": "https://commons.wikimedia.org/wiki/File:Toyota_Supra_Turbo_(1996)_(54805038494).jpg",
+  "artist": "Charles from Port Chester, New York",
+  "lic": "CC0",
+  "licurl": "https://creativecommons.org/publicdomain/zero/1.0/"
+ },
+ {
+  "file": "car-mustang-boss.jpg",
+  "coche": "Ford Mustang Boss 429",
+  "page": "https://commons.wikimedia.org/wiki/File:1969_Ford_Mustang_Boss_429_(6251652187).jpg",
+  "artist": "Greg Gjerdingen from Willmar, USA",
+  "lic": "CC BY 2.0",
+  "licurl": "https://creativecommons.org/licenses/by/2.0"
+ },
+ {
+  "file": "car-urus.jpg",
+  "coche": "Lamborghini Urus",
+  "page": "https://commons.wikimedia.org/wiki/File:Lamborghini_Urus_oblique_view_dllu_01.jpg",
+  "artist": "Dllu",
+  "lic": "CC BY-SA 4.0",
+  "licurl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ {
+  "file": "car-porsche.jpg",
+  "coche": "Porsche 911 Turbo S",
+  "page": "https://commons.wikimedia.org/wiki/File:Porsche_992_Turbo_S_1X7A0363.jpg",
+  "artist": "Alexander Migl",
+  "lic": "CC BY-SA 4.0",
+  "licurl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ {
+  "file": "car-bmw.jpg",
+  "coche": "BMW M5 Competition",
+  "page": "https://commons.wikimedia.org/wiki/File:BMW_M5_Competition_(F90)_Washington_DC_Metro_Area,_USA.jpg",
+  "artist": "OWS Photography",
+  "lic": "CC BY 4.0",
+  "licurl": "https://creativecommons.org/licenses/by/4.0"
+ },
+ {
+  "file": "car-mercedes-g.jpg",
+  "coche": "Mercedes-AMG G63",
+  "page": "https://commons.wikimedia.org/wiki/File:2018_Mercedes-AMG_G_63_4MATIC_Automatic_4.0_Front.jpg",
+  "artist": "Vauxford",
+  "lic": "CC BY-SA 4.0",
+  "licurl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ {
+  "file": "car-range-rover.jpg",
+  "coche": "Range Rover SVR",
+  "page": "https://commons.wikimedia.org/wiki/File:Land_Rover_Range_Rover_Sport_SVR_L494_FL_Eiger_Grey_(2).jpg",
+  "artist": "Damian B Oh",
+  "lic": "CC BY-SA 4.0",
+  "licurl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ {
+  "file": "car-camaro.jpg",
+  "coche": "Chevrolet Camaro SS",
+  "page": "https://commons.wikimedia.org/wiki/File:19_Chevrolet_Camaro_SS.jpg",
+  "artist": "HJUdall",
+  "lic": "CC0",
+  "licurl": "https://creativecommons.org/publicdomain/zero/1.0/"
+ },
+ {
+  "file": "car-charger.jpg",
+  "coche": "Dodge Charger Hellcat",
+  "page": "https://commons.wikimedia.org/wiki/File:Dodge_Charger_SRT_Hellcat_Washington_DC_Metro_Area,_USA.jpg",
+  "artist": "OWS Photography",
+  "lic": "CC BY 4.0",
+  "licurl": "https://creativecommons.org/licenses/by/4.0"
+ },
+ {
+  "file": "car-corvette.jpg",
+  "coche": "Chevrolet Corvette C8",
+  "page": "https://commons.wikimedia.org/wiki/File:2022_Chevrolet_Corvette_C8_Stingray_LC24.jpg",
+  "artist": "MrWalkr",
+  "lic": "CC BY-SA 4.0",
+  "licurl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ {
+  "file": "car-mustang.jpg",
+  "coche": "Ford Mustang GT 5.0",
+  "page": "https://commons.wikimedia.org/wiki/File:2018_Ford_Mustang_GT_(YY67_ZRX).jpg",
+  "artist": "Carfanatic2019",
+  "lic": "CC BY-SA 4.0",
+  "licurl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ {
+  "file": "car-competition.jpg",
+  "coche": "Motor V8 Competición (Ford Mustang de la Danish Thundersport Championship)",
+  "page": "https://commons.wikimedia.org/wiki/File:L18.55.06_-_Auto-G_DTC_-_15_-_Ford_Mustang_-_Mikkel_C._Johansen_-_paddock_-_DSC_0684_Optimizer_(36594498253).jpg",
+  "artist": "Lav Ulv from Viby J, Denmark",
+  "lic": "CC BY 2.0",
+  "licurl": "https://creativecommons.org/licenses/by/2.0"
+ },
+ {
+  "file": "car-350z-drift.jpg",
+  "coche": "Nissan 350Z Drift Spec",
+  "page": "https://commons.wikimedia.org/wiki/File:Nissan_350Z_Drift_Car_(51329325232).jpg",
+  "artist": "Neil",
+  "lic": "CC BY 2.0",
+  "licurl": "https://creativecommons.org/licenses/by/2.0"
+ },
+ {
+  "file": "car-bmw-drift.jpg",
+  "coche": "BMW Serie 3 E46 Drift",
+  "page": "https://commons.wikimedia.org/wiki/File:Huragan_racing_team%E2%80%99s_BMW_e46_at_the_1st_round_of_the_2023_Drift_Open_Championship_at_the_Motopark_Toru%C5%84_Poland.jpg",
+  "artist": "Alex Eddit",
+  "lic": "CC0",
+  "licurl": "https://creativecommons.org/publicdomain/zero/1.0/"
+ },
+ {
+  "file": "drift-bmw-e36.jpg",
+  "coche": "BMW Serie 3 E36",
+  "page": "https://commons.wikimedia.org/wiki/File:BMW_E36_drifting.JPG",
+  "artist": "Lewis Collard",
+  "lic": "CC BY 3.0",
+  "licurl": "https://creativecommons.org/licenses/by/3.0"
+ },
+ {
+  "file": "drift-bmw-e46.jpg",
+  "coche": "BMW Serie 3 E46",
+  "page": "https://commons.wikimedia.org/wiki/File:BMW_3_series_Coupe_(29726956481).jpg",
+  "artist": "FotoSleuth",
+  "lic": "CC BY 2.0",
+  "licurl": "https://creativecommons.org/licenses/by/2.0"
+ },
+ {
+  "file": "drift-lexus-is200.jpg",
+  "coche": "Lexus IS200",
+  "page": "https://commons.wikimedia.org/wiki/File:Lexus_IS200_(43599462675).jpg",
+  "artist": "FotoSleuth",
+  "lic": "CC BY 2.0",
+  "licurl": "https://creativecommons.org/licenses/by/2.0"
+ },
+ {
+  "file": "drift-lexus-is300.jpg",
+  "coche": "Lexus IS300",
+  "page": "https://commons.wikimedia.org/wiki/File:Lexus_IS_300.jpg",
+  "artist": "IFCAR",
+  "lic": "Dominio público",
+  "licurl": ""
+ },
+ {
+  "file": "drift-supra.jpg",
+  "coche": "Toyota Supra",
+  "page": "https://commons.wikimedia.org/wiki/File:Toyota_Supra_A80_Turbo_yellow,_front_left,_01-27-2024.jpg",
+  "artist": "Ethan Llamas",
+  "lic": "CC BY-SA 4.0",
+  "licurl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ {
+  "file": "drift-silvia-s13.jpg",
+  "coche": "Nissan Silvia S13",
+  "page": "https://commons.wikimedia.org/wiki/File:Nissan_S13_Silvia_K%27s.jpg",
+  "artist": "TKOIII",
+  "lic": "CC BY 4.0",
+  "licurl": "https://creativecommons.org/licenses/by/4.0"
+ },
+ {
+  "file": "drift-silvia-s14.jpg",
+  "coche": "Nissan Silvia S14",
+  "page": "https://commons.wikimedia.org/wiki/File:Nissan_Silvia_(S14)_1X7A1571.jpg",
+  "artist": "Alexander-93",
+  "lic": "CC BY-SA 4.0",
+  "licurl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ {
+  "file": "drift-bmw-m3.jpg",
+  "coche": "BMW M3 E46",
+  "page": "https://commons.wikimedia.org/wiki/File:2001-2006_BMW_M3_(E46)_coupe_(2018-11-02)_01.jpg",
+  "artist": "EurovisionNim",
+  "lic": "CC BY-SA 4.0",
+  "licurl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ {
+  "file": "drift-mustang-gt.jpg",
+  "coche": "Ford Mustang GT",
+  "page": "https://commons.wikimedia.org/wiki/File:Ford_Mustang_GT_Drift_Car.jpg",
+  "artist": "Calreyn88",
+  "lic": "CC BY-SA 4.0",
+  "licurl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ {
+  "file": "drift-charger.jpg",
+  "coche": "Dodge Charger",
+  "page": "https://commons.wikimedia.org/wiki/File:Dodge_Charger_SRT8_(2015)_1X7A7417.jpg",
+  "artist": "Alexander-93",
+  "lic": "CC BY-SA 4.0",
+  "licurl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ {
+  "file": "drift-gt86.jpg",
+  "coche": "Toyota GT86",
+  "page": "https://commons.wikimedia.org/wiki/File:2017_Toyota_GT86_PRO_D-4S_2.0_Front.jpg",
+  "artist": "Vauxford",
+  "lic": "CC BY-SA 4.0",
+  "licurl": "https://creativecommons.org/licenses/by-sa/4.0"
+ },
+ {
+  "file": "barco.jpg",
+  "coche": "Barco portacoches Liberty Peace",
+  "page": "https://commons.wikimedia.org/wiki/File:Car_carrier_vessel_LIBERTY_PEACE,_sailing_in_the_Puget_Sound_(20240219).jpg",
+  "artist": "FPTI",
+  "lic": "CC0",
+  "licurl": "https://creativecommons.org/publicdomain/zero/1.0/"
+ }
+]

@@ -1,0 +1,150 @@
+#!/usr/bin/env python3
+"""Empaqueta toda la web (desde preview/) en un único HTML autocontenido para verla en cualquier dispositivo."""
+import base64
+import os
+import re
+
+ROOT = os.path.dirname(os.path.abspath(__file__))
+SRC = os.path.join(ROOT, "preview")
+OUT = os.path.join(ROOT, "buscotucoche-vista-completa.html")
+
+PAGES = [
+    ("inicio", "index.html"),
+    ("nosotros", "nosotros/index.html"),
+    ("calle", "servicios/calle/index.html"),
+    ("competicion", "servicios/competicion/index.html"),
+    ("drift", "drift-72h/index.html"),
+    ("ventajas", "ventajas/index.html"),
+    ("stock", "stock/index.html"),
+    ("subir", "stock/subir/index.html"),
+    ("contacto", "contacto/index.html"),
+    ("configurador", "configurador/index.html"),
+    ("aviso", "aviso-legal/index.html"),
+    ("privacidad", "privacidad/index.html"),
+    ("creditos", "creditos/index.html"),
+]
+KEY_BY_DIR = {os.path.dirname(p): k for k, p in PAGES}
+
+_cache = {}
+
+
+def data_uri(path):
+    if path not in _cache:
+        with open(path, "rb") as f:
+            raw = f.read()
+        mime = "image/svg+xml" if path.endswith(".svg") else "font/woff2" if path.endswith(".woff2") else "image/jpeg"
+        _cache[path] = f"data:{mime};base64,{base64.b64encode(raw).decode()}"
+    return _cache[path]
+
+
+def rewrite(html, page_path):
+    base = os.path.dirname(page_path)
+
+    def link(m):
+        target, query = m.group(1), m.group(2) or ""
+        norm = os.path.normpath(os.path.join(base, target)).replace(os.sep, "/")
+        key = KEY_BY_DIR.get(os.path.dirname(norm) if norm != "index.html" else "", "inicio")
+        return f'href="#{key}{query}"'
+
+    html = re.sub(r'href="([^"#:]*?index\.html)(\?[^"]*)?"', link, html)
+
+    def img(m):
+        rel = m.group(1)
+        full = os.path.normpath(os.path.join(SRC, base, rel))
+        small = full.replace(".jpg", "-sm.jpg")
+        if full.endswith(".jpg") and not full.endswith("-sm.jpg") and os.path.exists(small):
+            full = small  # versión ligera para el archivo único
+        return f'src="{data_uri(full)}"'
+
+    html = re.sub(r' srcset="[^"]*" sizes="[^"]*"', "", html)
+
+    html = re.sub(r'src="([^"]*assets/img/[^"]+)"', img, html)
+    return html
+
+
+def main_of(html):
+    return re.search(r'<main id="main">(.*)</main>', html, re.S).group(1)
+
+
+def main():
+    home = open(os.path.join(SRC, "index.html"), encoding="utf-8").read()
+    header = re.search(r'(<a class="skip".*?</header>)', home, re.S).group(1)
+    footer = re.search(r'(<footer class="site-footer">.*?</a>)\s*<script', home, re.S).group(1)
+    header, footer = rewrite(header, "index.html"), rewrite(footer, "index.html")
+    header = header.replace(' aria-current="page"', "")
+
+    sections = []
+    for key, path in PAGES:
+        html = open(os.path.join(SRC, path), encoding="utf-8").read()
+        title = re.search(r"<title>(.*?)</title>", html).group(1)
+        body = main_of(html)
+        body = re.sub(r"<script>.*?</script>", "", body, flags=re.S)  # el router se encarga del relleno
+        body = re.sub(r'(id|for)="f-', rf'\1="f-{key}-', body)            # ids únicos entre páginas
+        body = rewrite(body, path)
+        sections.append(f'<section class="page" data-page="{key}" data-title="{title}" hidden>{body}</section>')
+
+    css = open(os.path.join(SRC, "assets/css/site.css"), encoding="utf-8").read()
+    css = css.replace('url("../fonts/archivo.woff2")', f'url("{data_uri(os.path.join(SRC, "assets/fonts/archivo.woff2"))}")')
+    js = open(os.path.join(SRC, "assets/js/site.js"), encoding="utf-8").read()
+    body_attrs = re.search(r"<body([^>]*)>", home).group(1)
+    head_meta = re.search(r'(<meta charset.*?<meta name="theme-color"[^>]*>)', home, re.S).group(1)
+    favicon = re.search(r'(<link rel="icon"[^>]*>)', home).group(1)
+
+    router = r"""
+(function () {
+  var pages = document.querySelectorAll(".page");
+  var navLinks = document.querySelectorAll(".nav a, .nav summary");
+  function show() {
+    var h = location.hash.slice(1) || "inicio";
+    var key = h.split("?")[0], params = new URLSearchParams(h.split("?")[1] || "");
+    var page = document.querySelector('.page[data-page="' + key + '"]');
+    if (!page) { var anchor = document.getElementById(key); if (anchor) { anchor.scrollIntoView(); return; } key = "inicio"; page = document.querySelector('.page[data-page="inicio"]'); }
+    pages.forEach(function (p) { p.hidden = p !== page; });
+    document.title = page.getAttribute("data-title");
+    navLinks.forEach(function (a) { a.removeAttribute("aria-current"); });
+    var cur = document.querySelector('.nav a[href="#' + key + '"]');
+    if (cur) cur.setAttribute("aria-current", "page");
+    var modelo = params.get("modelo");
+    if (modelo) { var f = page.querySelector("[name=modelo]"); if (f) f.value = modelo; }
+    var coche = params.get("coche");
+    if (coche) {
+      var sel = page.querySelector("#cfg-coche");
+      if (sel) {
+        if (!Array.prototype.some.call(sel.options, function (o) { return o.value === coche; })) sel.add(new Option(coche, coche), 0);
+        sel.value = coche; sel.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    }
+    document.body.classList.remove("menu-open");
+    window.scrollTo(0, 0);
+  }
+  window.addEventListener("hashchange", show);
+  show();
+})();
+"""
+
+    out = f"""<!doctype html>
+<html lang="es">
+<head>
+{head_meta}
+<title>Busco Tu Coche — vista completa</title>
+{favicon}
+<style>{css}</style>
+</head>
+<body{body_attrs}>
+{header}
+<main id="main">
+{''.join(sections)}
+</main>
+{footer}
+<script>{js}</script>
+<script>{router}</script>
+</body>
+</html>
+"""
+    with open(OUT, "w", encoding="utf-8") as f:
+        f.write(out)
+    print(OUT, round(len(out) / 1024), "KB")
+
+
+if __name__ == "__main__":
+    main()
