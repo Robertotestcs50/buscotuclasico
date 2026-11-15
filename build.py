@@ -29,7 +29,7 @@ DOMAIN = "www.buscotucoche.com"      # dominio principal (sin https). buscotucla
 PHONE_DISPLAY = "+34 629 61 76 93"
 PHONE_TEL = "+34629617693"
 WHATSAPP = "34629617693"
-EMAIL = "info@buscamostucoche.com"
+EMAIL = "info@buscotucoche.com"
 CITY = "Madrid, España"
 # Servicio para recibir los formularios en el correo (p. ej. "https://formspree.io/f/xxxxxxx").
 # Si se deja vacío, los formularios abren WhatsApp con la solicitud ya escrita.
