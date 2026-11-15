@@ -88,7 +88,7 @@
       typing = q.length > 0;
       var c = best(q);
       if (c) {
-        live.src = c.img; live.alt = c.name;
+        live.src = c.img; live.alt = c.name; live.style.objectPosition = c.pos || "";
         slotImgs.forEach(function (im) { im.classList.remove("is-on"); });
         live.classList.add("is-on");
         out.innerHTML = "Lo tenemos de ejemplo: <a href=\"" + c.url + "\">" + c.name + "</a>, " + c.chassis_text + "desde " + c.origin + ".";
@@ -187,7 +187,7 @@
       });
       var cr = carVal(); var carName = cr ? cr.value : (wanted || "");
       outs.coche.textContent = carName;
-      if (cr && sumPhoto && sumPhoto.getAttribute("src") !== cr.getAttribute("data-img")) { sumPhoto.src = cr.getAttribute("data-img"); sumPhoto.alt = carName; }
+      if (cr && sumPhoto && sumPhoto.getAttribute("src") !== cr.getAttribute("data-img")) { sumPhoto.src = cr.getAttribute("data-img"); sumPhoto.alt = carName; sumPhoto.style.objectPosition = cr.getAttribute("data-pos") || ""; }
       meter.style.width = Math.min(100, 20 + gain * 1.4) + "%";
       gainTxt.textContent = gain > 0 ? "+" + gain + " %" : "De serie";
       waBtn.href = waLink("Hola, quiero configurar mi " + carName + " (ruedas: " + parts.ruedas + ", suspensión: " + parts.suspension +
@@ -198,7 +198,7 @@
   /* ---------- WhatsApp flotante: se aparta cuando taparía un botón ---------- */
   var waFloat = document.querySelector(".wa-float");
   if (waFloat && "IntersectionObserver" in window) {
-    var blockers = document.querySelectorAll("#finder, form .form-actions, .cta-band, .footer");
+    var blockers = document.querySelectorAll("#finder, form .form-actions, .page-head .side, .cta-band, .footer");
     var onScreen = new Set();
     var waIo = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) { if (en.isIntersecting) onScreen.add(en.target); else onScreen.delete(en.target); });

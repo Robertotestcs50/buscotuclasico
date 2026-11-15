@@ -20,6 +20,11 @@ PAGES = [
     ("subir", "stock/subir/index.html"),
     ("contacto", "contacto/index.html"),
     ("configurador", "configurador/index.html"),
+    ("guia", "importar/index.html"),
+    ("eeuu", "importar/estados-unidos/index.html"),
+    ("japon", "importar/japon/index.html"),
+    ("dubai", "importar/dubai/index.html"),
+    ("alemania", "importar/alemania/index.html"),
     ("aviso", "aviso-legal/index.html"),
     ("privacidad", "privacidad/index.html"),
     ("creditos", "creditos/index.html"),
@@ -102,8 +107,9 @@ def main():
         css = css.replace(f'url("../fonts/{font}")', f'url("{data_uri(os.path.join(SRC, "assets/fonts/" + font))}")')
     js = open(os.path.join(SRC, "assets/js/site.js"), encoding="utf-8").read()
     body_attrs = re.search(r"<body([^>]*)>", home).group(1)
-    head_meta = re.search(r'(<meta charset.*?<meta name="theme-color"[^>]*>)', home, re.S).group(1)
-    favicon = re.search(r'(<link rel="icon"[^>]*>)', home).group(1)
+    head_meta = '<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<meta name="theme-color" content="#eeecea">'
+    svg = open(os.path.join(ROOT, "static", "favicon.svg"), encoding="utf-8").read().strip()
+    favicon = '<link rel="icon" href="data:image/svg+xml;base64,' + base64.b64encode(svg.encode()).decode() + '">'
 
     router = r"""
 (function () {

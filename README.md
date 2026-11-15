@@ -6,10 +6,14 @@ Web estática, rápida y sin dependencias, lista para GitHub Pages.
 
 - `docs/` — la web ya generada. Es lo que publica GitHub Pages.
 - `build.py` — genera `docs/`. Aquí están los textos, los coches y los datos de contacto.
+- `guias.py` — textos de las guías «Importar un coche a España» (general y por país), con sus impuestos y fuentes.
+  Revisar si cambia la normativa y actualizar la fecha `UPDATED`.
+- `focus.py` — punto importante de cada foto, para que el coche salga centrado en todos los recortes.
+  Si añades una foto nueva, añade aquí su punto (en % de ancho y alto).
 - `assets/` — estilos, código, tipografía y fotos (`assets/img/`, ver su README).
-- `scenes.py` — dibuja las ilustraciones de los coches (carrocería, color y paisaje del país de origen).
-  Si pones una foto real con el nombre indicado en `assets/img/README.md`, la web la usa en lugar del dibujo.
-- `data/stock.json` — coches en stock (lista vacía `[]` = página de stock sin coches).
+- `static/` — iconos y manifiesto que van en la raíz de la web.
+- `data/stock.json` — coches en stock (lista vacía `[]` = página de stock sin coches, que no se indexa).
+- `make_single.py` — empaqueta toda la web en un solo HTML para verla sin conexión.
 
 ## Cambiar algo
 
@@ -56,6 +60,22 @@ Si preferís que el principal sea buscotuclasico.com, cambia `DOMAIN` en `build.
 Sin configurar nada, los formularios abren WhatsApp con la solicitud ya escrita.
 Para recibirlos también por email: crea un formulario gratis en formspree.io con `info@buscotucoche.com`,
 copia su dirección (`https://formspree.io/f/xxxxxxx`) en `FORM_ENDPOINT` dentro de `build.py` y vuelve a generar.
+
+## SEO y buscadores con IA (GEO)
+
+`build.py` genera solo:
+
+- Título, descripción, canonical, Open Graph y Twitter únicos por página.
+- Datos estructurados (schema.org): negocio (AutoDealer), web, migas de pan, servicios, artículos de las guías y preguntas frecuentes.
+- `sitemap.xml` (solo páginas indexables, con fecha), `robots.txt` (abierto a Google, Bing y asistentes de IA) y `llms.txt` (resumen del negocio para asistentes de IA).
+- `noindex` en aviso legal, privacidad, créditos, 404, subir anuncio y stock mientras esté vacío.
+
+Por hacer una vez (lo tiene que hacer el dueño, con su cuenta):
+
+1. Google Search Console: añadir la propiedad de dominio `buscotucoche.com` (verificación por registro TXT en IONOS) y enviar `https://www.buscotucoche.com/sitemap.xml`.
+2. Bing Webmaster Tools: importar la propiedad desde Search Console (Bing alimenta también a ChatGPT y Copilot).
+3. Perfil de Empresa de Google, solo si hay una dirección o zona de servicio real.
+4. Redirección 301 de `buscotuclasico.com` a `https://www.buscotucoche.com` en IONOS.
 
 ## Pendiente antes de publicar
 

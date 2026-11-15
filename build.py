@@ -13,6 +13,9 @@ import html
 import json
 import os
 import re
+from focus import focus_of
+from guias import (UPDATED, UPDATED_TEXT, SOURCES, IEDMT, GUIDE_STEPS, COMPARE_COLS, COMPARE,
+                   GUIDE_FAQ, ORIGIN_GUIDES)
 import shutil
 import sys
 from urllib.parse import quote
@@ -34,6 +37,13 @@ CITY = "Madrid, España"
 # Servicio para recibir los formularios en el correo (p. ej. "https://formspree.io/f/xxxxxxx").
 # Si se deja vacío, los formularios abren WhatsApp con la solicitud ya escrita.
 FORM_ENDPOINT = ""
+SITE = f"https://{DOMAIN}" if DOMAIN else ""
+ORG_ID = f"{SITE}/#negocio"
+WEB_ID = f"{SITE}/#web"
+ALT_NAMES = ["Busco Tu Clásico", "buscotuclasico.com", "buscotucoche.com"]
+ORG_DESC = ("Importación de coches clásicos, JDM, muscle, de lujo, de drift y de competición desde Estados Unidos, "
+            "Japón, Dubái y Alemania a España, llave en mano: búsqueda, revisión en origen, compra segura, transporte, "
+            "aduana, homologación, ITV y matrícula española.")
 YEAR = 2026
 
 WA_DEFAULT = f"Hola, me interesa importar un coche con {BRAND}"
@@ -134,8 +144,8 @@ STEPS = [
     ("Inspección presencial", "Nuestros equipos en origen revisan el coche físicamente: chasis, mecánica, historial y documentación. Recibes informe y fotos."),
     ("Compra y pago seguro", "Negociamos el precio, firmamos contrato y gestionamos el pago con cuenta escrow o garantías equivalentes."),
     ("Logística internacional", "Transporte marítimo en contenedor cerrado con seguro a todo riesgo desde Dubái, EE. UU. o Japón hasta el puerto europeo."),
-    ("Aduanas y EORI", "Tramitamos despacho aduanero, EORI, pago de aranceles e IVA y la liberación del vehículo."),
-    ("ITV y homologación", "Homologación individual, ficha técnica reducida e ITV específica para que cumpla la normativa europea."),
+    ("Aduana", "Si el coche viene de fuera de la UE, presentamos el DUA, pagamos el IVA y el arancel si toca, y liberamos el coche."),
+    ("ITV y homologación", "Ficha técnica reducida si el coche tiene certificado europeo (COC) u homologación individual si no lo tiene, y la ITV en España."),
     ("Matriculación", "Tramitamos la matriculación definitiva en España y la entrega final con todas las llaves y documentación."),
 ]
 
@@ -163,7 +173,7 @@ FAQ = [
     ("¿Es seguro pagar un coche que está en otro país?",
      "Firmamos un contrato contigo y el pago se gestiona con cuenta escrow o garantías equivalentes. Recibes factura legal y toda la documentación del coche."),
     ("¿Se puede matricular en España un coche importado?",
-     "Sí, después de homologarlo: homologación individual, ficha técnica reducida e ITV específica. Lo estudiamos antes de comprar y nos encargamos de todo el trámite."),
+     "Sí. Si el coche tiene certificado europeo de conformidad (COC), basta la ficha técnica reducida y la ITV; si no lo tiene, como la mayoría de coches de EE. UU., Japón o Dubái, necesita homologación individual. Lo estudiamos antes de comprar y hacemos todo el trámite."),
     ("¿Importáis coches clásicos?",
      "Sí: muscle cars americanos, JDM de los 90 y deportivos europeos de colección. Si el coche cumple los requisitos, te asesoramos sobre matricularlo como vehículo histórico."),
     ("¿Puedo pedir un coche que no aparece en la web?",
@@ -252,29 +262,47 @@ class Page:
     def asset(self, p):
         return os.path.relpath("assets/" + p, os.path.dirname(self.path) or ".").replace(os.sep, "/")
 
+    def root(self, f):
+        return os.path.relpath(f, os.path.dirname(self.path) or ".").replace(os.sep, "/")
+
+    def url(self):
+        clean = self.path[: -len("index.html")] if self.path.endswith("index.html") else self.path
+        return f"{SITE}/{clean}"
+
     def contact(self, modelo=None):
         q = ("?modelo=" + quote(modelo)) if modelo else ""
         return self.href("contacto/index.html") + q + "#solicitud"
+
+
+_PHOTO_NAMES = None
+
+
+def photo_name(img):
+    """Qué se ve en una foto (sale de data/fotos.json); sirve de texto alternativo y para og:image:alt."""
+    global _PHOTO_NAMES
+    if _PHOTO_NAMES is None:
+        _PHOTO_NAMES = {f["file"]: f["coche"] for f in load_json("fotos.json")}
+    return _PHOTO_NAMES.get(img.replace("-sm.jpg", ".jpg"), BRAND)
 
 
 def wa(text=WA_DEFAULT):
     return f"https://wa.me/{WHATSAPP}?text={quote(text)}"
 
 
+def pos(img):
+    x, y = focus_of(img)
+    return f"{x}% {y}%"
+
+
 def photo(p, img, alt="", lazy=True, sizes="(max-width: 640px) 100vw, 33vw", cls="", extra=""):
     sm = img.replace(".jpg", "-sm.jpg")
     srcset = f' srcset="{p.asset("img/" + sm)} 600w, {p.asset("img/" + img)} 1200w" sizes="{sizes}"' if img_exists(sm) else ""
     c = f' class="{cls}"' if cls else ""
-    lz = ' loading="lazy"' if lazy else ""
-    return f'<img src="{p.asset("img/" + img)}"{srcset} alt="{e(alt)}"{c}{lz} decoding="async" width="1200" height="800"{extra}>'
+    lz = ' loading="lazy"' if lazy else ' fetchpriority="high"'
+    return f'<img src="{p.asset("img/" + img)}"{srcset} alt="{e(alt)}"{c}{lz} decoding="async" width="1200" height="800" style="object-position:{pos(img)}"{extra}>'
 
 
 WA_ICON = ('<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.8-.9-2-1-.3-.1-.5-.1-.7.1-.2.3-.8 1-.9 1.2-.2.2-.3.2-.6.1-.3-.1-1.3-.5-2.4-1.5-.9-.8-1.5-1.8-1.7-2.1-.2-.3 0-.5.1-.6l.4-.5c.2-.2.2-.3.3-.5.1-.2 0-.4 0-.5l-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.4.2 1.9.1.6-.1 1.8-.7 2-1.4.2-.7.2-1.3.2-1.4-.1-.2-.3-.3-.6-.4zM12 21.8c-1.8 0-3.5-.5-5-1.4l-.4-.2-3.7 1 1-3.6-.2-.4C2.7 15.6 2.2 13.8 2.2 12 2.2 6.6 6.6 2.2 12 2.2c2.6 0 5.1 1 6.9 2.9 1.8 1.8 2.9 4.3 2.9 6.9 0 5.4-4.4 9.8-9.8 9.8zm8.4-18.2C18.1 1.3 15.2.1 12 .1 5.5.1.1 5.4.1 12c0 2.1.5 4.1 1.6 5.9L0 24l6.3-1.7c1.7.9 3.7 1.4 5.7 1.4 6.6 0 11.9-5.3 11.9-11.9 0-3.2-1.2-6.2-3.5-8.4z"/></svg>')
-
-FAVICON = "data:image/svg+xml," + quote(
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#eeecea"/>'
-    '<rect x="8" y="21" width="48" height="22" rx="7" fill="#4f5e48"/></svg>')
-
 
 def mark(p):
     return f'<a class="mark" href="{p.href("index.html")}" aria-label="{BRAND}, ir al inicio">Busco<i aria-hidden="true"></i>tu coche</a>'
@@ -309,6 +337,7 @@ def header(p, active):
 
 
 def footer(p):
+    guides = "".join(f'<li><a href="{p.href(f"importar/{g["slug"]}/index.html")}">Importar de {g["short"]}</a></li>' for g in ORIGIN_GUIDES)
     return f"""<footer class="footer">
   <div class="wrap g12 footer-grid">
     <div class="f-brand">
@@ -329,6 +358,10 @@ def footer(p):
       <li><a href="{p.href("stock/index.html")}">Stock</a></li>
       <li><a href="{p.contact()}">Contacto</a></li>
     </ul>
+    <ul class="f-links f-guides">
+      <li><a href="{p.href("importar/index.html")}">Cómo importar un coche</a></li>
+      {guides}
+    </ul>
   </div>
   <div class="wrap footer-meta">
     <p>© {YEAR} {BRAND}</p>
@@ -338,35 +371,118 @@ def footer(p):
 </footer>"""
 
 
-def layout(p, title, desc, active, main, extra_head="", og_img="car-mercedes-e500.jpg"):
-    canonical = og = ""
+# ---------------------------------------------------------------------
+# SEO: datos estructurados (schema.org) y registro de páginas indexables
+# ---------------------------------------------------------------------
+INDEX = {}      # ruta -> (indexable, título, descripción) para el sitemap y llms.txt
+
+
+def ld_script(obj):
+    return '<script type="application/ld+json">' + json.dumps(obj, ensure_ascii=False).replace("</", "<\\/") + "</script>"
+
+
+def org_ld():
+    return {
+        "@type": "AutoDealer", "@id": ORG_ID, "name": BRAND, "alternateName": ALT_NAMES,
+        "url": f"{SITE}/", "description": ORG_DESC,
+        "logo": {"@type": "ImageObject", "url": f"{SITE}/icon-512.png", "width": 512, "height": 512},
+        "image": f"{SITE}/icon-512.png",
+        "telephone": PHONE_TEL, "email": EMAIL,
+        "address": {"@type": "PostalAddress", "addressLocality": "Madrid", "addressRegion": "Comunidad de Madrid", "addressCountry": "ES"},
+        "areaServed": {"@type": "Country", "name": "España"},
+        "contactPoint": [{"@type": "ContactPoint", "telephone": PHONE_TEL, "email": EMAIL, "contactType": "customer service",
+                          "areaServed": "ES", "availableLanguage": ["es"]}],
+        "knowsAbout": ["Importación de coches", "Homologación de vehículos importados", "Coches clásicos", "Vehículos históricos",
+                       "JDM", "Muscle cars", "Coches de lujo", "Drift", "Coches de competición",
+                       "Importar coches de Estados Unidos", "Importar coches de Japón", "Importar coches de Dubái",
+                       "Importar coches de Alemania"],
+    }
+
+
+def website_ld():
+    return {"@type": "WebSite", "@id": WEB_ID, "url": f"{SITE}/", "name": BRAND, "alternateName": ALT_NAMES,
+            "inLanguage": "es-ES", "publisher": {"@id": ORG_ID}}
+
+
+def faq_ld(items):
+    return {"@type": "FAQPage", "mainEntity": [
+        {"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in items]}
+
+
+def service_ld(p, name, service_type, desc, models=()):
+    node = {"@type": "Service", "@id": p.url() + "#servicio", "name": name, "serviceType": service_type,
+            "description": desc, "provider": {"@id": ORG_ID}, "areaServed": {"@type": "Country", "name": "España"},
+            "url": p.url()}
+    if models:
+        node["hasOfferCatalog"] = {"@type": "OfferCatalog", "name": "Modelos que importamos",
+                                   "itemListElement": [{"@type": "ListItem", "position": i + 1, "name": m} for i, m in enumerate(models)]}
+    return node
+
+
+def article_ld(p, headline, desc, img):
+    return {"@type": "Article", "@id": p.url() + "#articulo", "headline": headline, "description": desc,
+            "image": f"{SITE}/assets/img/{img}", "inLanguage": "es-ES",
+            "datePublished": UPDATED, "dateModified": UPDATED,
+            "author": {"@id": ORG_ID}, "publisher": {"@id": ORG_ID},
+            "mainEntityOfPage": {"@id": p.url() + "#pagina"}}
+
+
+def layout(p, title, desc, active, main, ld=(), og_img="car-mercedes-e500.jpg", index=True, crumbs=(),
+           page_type="WebPage", og_type="website"):
+    """crumbs: [(nombre, ruta)] desde la portada hasta esta página (para las migas de los buscadores)."""
+    INDEX[p.path] = (index, title, desc)
+    url = p.url()
+    robots = ("index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" if index else "noindex, follow")
+    head_seo = ""
     if DOMAIN:
-        clean = p.path[: -len("index.html")] if p.path.endswith("index.html") else p.path
-        canonical = f'<link rel="canonical" href="https://{DOMAIN}/{clean}">'
-        og = (f'<meta property="og:url" content="https://{DOMAIN}/{clean}">\n'
-              f'<meta property="og:image" content="https://{DOMAIN}/assets/img/{og_img}">\n'
-              f'<meta name="twitter:card" content="summary_large_image">')
+        img_url = f"{SITE}/assets/img/{og_img}"
+        graph = [org_ld(), website_ld()]
+        page = {"@type": page_type, "@id": url + "#pagina", "url": url, "name": title, "description": desc,
+                "isPartOf": {"@id": WEB_ID}, "about": {"@id": ORG_ID}, "inLanguage": "es-ES",
+                "primaryImageOfPage": {"@type": "ImageObject", "url": img_url, "width": 1200, "height": 800},
+                "dateModified": UPDATED}
+        if crumbs:
+            page["breadcrumb"] = {"@id": url + "#migas"}
+            trail = [("Inicio", "index.html")] + list(crumbs)
+            graph.append({"@type": "BreadcrumbList", "@id": url + "#migas", "itemListElement": [
+                {"@type": "ListItem", "position": i + 1, "name": n, "item": Page(t).url()} for i, (n, t) in enumerate(trail)]})
+        graph.append(page)
+        graph += list(ld)
+        head_seo = (
+            (f'<link rel="canonical" href="{url}">\n' if index else "")
+            + f'<meta property="og:type" content="{og_type}">\n'
+            f'<meta property="og:locale" content="es_ES">\n'
+            f'<meta property="og:site_name" content="{e(BRAND)}">\n'
+            f'<meta property="og:title" content="{e(title)}">\n'
+            f'<meta property="og:description" content="{e(desc)}">\n'
+            f'<meta property="og:url" content="{url}">\n'
+            f'<meta property="og:image" content="{img_url}">\n'
+            f'<meta property="og:image:width" content="1200">\n'
+            f'<meta property="og:image:height" content="800">\n'
+            f'<meta property="og:image:alt" content="{e(photo_name(og_img))}">\n'
+            f'<meta name="twitter:card" content="summary_large_image">\n'
+            f'<meta name="twitter:title" content="{e(title)}">\n'
+            f'<meta name="twitter:description" content="{e(desc)}">\n'
+            f'<meta name="twitter:image" content="{img_url}">\n'
+            + ld_script({"@context": "https://schema.org", "@graph": graph}))
     return f"""<!doctype html>
-<html lang="es">
+<html lang="es-ES">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{e(title)}</title>
 <meta name="description" content="{e(desc)}">
+<meta name="robots" content="{robots}">
 <meta name="theme-color" content="#eeecea">
-{canonical}
-<meta property="og:type" content="website">
-<meta property="og:locale" content="es_ES">
-<meta property="og:site_name" content="{e(BRAND)}">
-<meta property="og:title" content="{e(title)}">
-<meta property="og:description" content="{e(desc)}">
-{og}
-<link rel="icon" href="{FAVICON}">
+<link rel="icon" href="{p.root("favicon.ico")}" sizes="48x48">
+<link rel="icon" href="{p.root("favicon.svg")}" type="image/svg+xml">
+<link rel="apple-touch-icon" href="{p.root("apple-touch-icon.png")}">
+<link rel="manifest" href="{p.root("site.webmanifest")}">
 <link rel="preload" href="{p.asset("fonts/imbue.woff2")}" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="{p.asset("fonts/albert-sans.woff2")}" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="{p.asset("css/site.css")}">
 <script>document.documentElement.classList.add("js")</script>
-{extra_head}
+{head_seo}
 </head>
 <body data-wa="{WHATSAPP}" data-endpoint="{e(FORM_ENDPOINT)}">
 {header(p, active)}
@@ -380,20 +496,22 @@ def layout(p, title, desc, active, main, extra_head="", og_img="car-mercedes-e50
 """
 
 
-def sentence(p, w1, img, w2, cls="", tag="h1"):
+def sentence(p, w1, img, w2, cls="", tag="h1", sr=""):
     slot = ""
     if img:
         slot = f'<span class="slot shutter" aria-hidden="true">{photo(p, img, "", lazy=False, sizes="(max-width: 760px) 100vw, 45vw", cls="is-on")}</span>'
-    return f'<{tag} class="sentence {cls}"><span class="w">{e(w1)}</span>{slot}<span class="w">{e(w2)}</span></{tag}>'
+    extra = f'<span class="sr-only"> {e(sr)}</span>' if sr else ""
+    return f'<{tag} class="sentence {cls}"><span class="w">{e(w1)}</span>{slot}<span class="w">{e(w2)}</span>{extra}</{tag}>'
 
 
-def page_head(p, crumb, w1, img, w2, lead, side="", long=False):
-    trail = f'<a href="{p.href("index.html")}">Inicio</a> / {e(crumb)}'
+def page_head(p, crumb, w1, img, w2, lead, side="", long=False, mid=(), sr=""):
+    trail = f'<a href="{p.href("index.html")}">Inicio</a> / ' + "".join(
+        f'<a href="{p.href(t)}">{e(n)}</a> / ' for n, t in mid) + e(crumb)
     side_html = f'<div class="side">{side}</div>' if side else ""
     return f"""<section class="page-head">
   <div class="wrap">
     <nav class="crumbs" aria-label="Estás en">{trail}</nav>
-    {sentence(p, w1, img, w2, "long" if long else "")}
+    {sentence(p, w1, img, w2, "long" if long else "", sr=sr)}
     <div class="g12 intro"><p class="lead">{lead}</p>{side_html}</div>
   </div>
 </section>"""
@@ -450,12 +568,6 @@ def faq_html(title, items=None, more=""):
 </div>'''
 
 
-def faq_jsonld():
-    data = {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [
-        {"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in FAQ]}
-    return f'<script type="application/ld+json">{json.dumps(data, ensure_ascii=False)}</script>'
-
-
 PERK_TILES = [
     ("t-surface", "Sin sorpresas", "Te damos el coste total por escrito antes de decidir y un informe en cada paso."),
     ("t-field", "Todo en regla", "Contrato, factura legal y toda la documentación del coche. Respaldo legal en todo el proceso."),
@@ -473,7 +585,7 @@ STEP_SHOW = [
     ("Buscamos", "car-skyline.jpg", "Localizamos la unidad que encaja con tu presupuesto en cuatro mercados."),
     ("Revisamos", "car-competition.jpg", "La vemos en persona: chasis, mecánica, historial y papeles. Te mandamos informe y fotos."),
     ("Compramos", "car-mercedes-e500.jpg", "Negociamos, firmamos contrato y el pago va por cuenta escrow o garantía equivalente."),
-    ("Traemos", "barco.jpg", "En contenedor cerrado y asegurado. Aduanas, EORI, aranceles e IVA incluidos."),
+    ("Traemos", "barco.jpg", "En barco o camión, con seguro. Nos ocupamos de la aduana, el arancel y el IVA."),
     ("Matriculamos", "car-camaro.jpg", "Homologación, ITV y matrícula española. Te damos las llaves y los papeles."),
 ]
 
@@ -516,14 +628,14 @@ def page_home():
                         for i, n in enumerate(hero_cars))
     finder_data = [dict(name=c["name"], keys=KEYS.get(c["name"], ""), chassis=chassis_of(c["name"]),
                         chassis_text=(f"chasis {chassis_of(c['name'])}, " if chassis_of(c["name"]) else ""),
-                        origin=ORIGINS[c["o"]], img=p.asset("img/" + c["img"].replace(".jpg", "-sm.jpg")),
+                        origin=ORIGINS[c["o"]], img=p.asset("img/" + c["img"].replace(".jpg", "-sm.jpg")), pos=pos(c["img"]),
                         url=p.contact(f"{c['name']} {c['year']}")) for c in cars]
     for _, _, _, items in DRIFT_LEVELS:
         for n, img, *_ in items:
             if img_exists(img) and n not in by:
                 finder_data.append(dict(name=n, keys=n.lower(), chassis=chassis_of(n),
                                         chassis_text=(f"chasis {chassis_of(n)}, " if chassis_of(n) else ""), origin="nuestro programa de drift",
-                                        img=p.asset("img/" + img.replace(".jpg", "-sm.jpg")), url=p.href("drift-72h/index.html")))
+                                        img=p.asset("img/" + img.replace(".jpg", "-sm.jpg")), pos=pos(img), url=p.href("drift-72h/index.html")))
 
     index_names = ["Mercedes-Benz E 500", "BMW 325i E30", "Nissan Skyline R34 GT-R", "Toyota Supra MK4 Turbo", "Ford Mustang Boss 429", "Lamborghini Urus"]
     rows, prev = "", ""
@@ -539,13 +651,7 @@ def page_home():
         prev += photo(p, c["img"], n, lazy=True, sizes="40vw", cls="is-on" if i == 0 else "")
     first_cap = f"{index_names[0]}, {by[index_names[0]]['year']}. {SPECS[index_names[0]][1]}, {SPECS[index_names[0]][2]}."
 
-    jsonld = {"@context": "https://schema.org", "@type": "AutoDealer", "name": BRAND,
-              "description": "Importación de coches clásicos, JDM, muscle y de lujo desde Dubái, EE. UU., Japón y Alemania a España.",
-              "telephone": PHONE_TEL, "email": EMAIL, "areaServed": "España",
-              "address": {"@type": "PostalAddress", "addressLocality": "Madrid", "addressCountry": "ES"}}
-    if DOMAIN:
-        jsonld["url"] = f"https://{DOMAIN}/"
-    head = (f'<script type="application/ld+json">{json.dumps(jsonld, ensure_ascii=False)}</script>' + faq_jsonld())
+    home_faq = FAQ[:5]
 
     paths = [
         ("Coches de calle", "car-urus.jpg", "Clásicos, deportivos, SUV y berlinas de lujo.", "servicios/calle/index.html"),
@@ -594,7 +700,7 @@ def page_home():
 
 <section class="section">
   <div class="wrap">
-    <div class="g12 head rv"><h2>Así lo traemos</h2><p>Cinco pasos y uno solo es tuyo: elegir el coche.</p></div>
+    <div class="g12 head rv"><h2>Así lo traemos</h2><p>Cinco pasos y uno solo es tuyo: elegir el coche. <a class="link" href="{p.href("importar/index.html")}">Guía completa para importar un coche</a></p></div>
     {steps_show(p)}
   </div>
 </section>
@@ -607,27 +713,30 @@ def page_home():
 </section>
 
 <section class="section">
-  <div class="wrap">{faq_html("Preguntas frecuentes", FAQ[:5], f'<a class="link" href="{p.contact()}">Ver todas las preguntas</a>')}</div>
+  <div class="wrap">{faq_html("Preguntas frecuentes", home_faq, f'<a class="link" href="{p.contact()}">Ver todas las preguntas</a>')}</div>
 </section>
 
 {cta_band(p)}
 """
-    return p, layout(p, "Busco Tu Coche | Importación de coches clásicos, JDM, muscle y de lujo",
-                     "Importamos coches clásicos, JDM, muscle, de lujo, drift y competición desde Dubái, EE. UU., Japón y Alemania a España. Servicio llave en mano con homologación y matrícula.",
-                     "inicio", main, head)
+    return p, layout(p, "Importar coches a España: clásicos, JDM y lujo | Busco Tu Coche",
+                     "Importamos coches clásicos, JDM, muscle y de lujo desde EE. UU., Japón, Dubái y Alemania y te los entregamos matriculados en España. Estudio gratis en 24 h.",
+                     "inicio", main, ld=[faq_ld(home_faq)])
 
 
 ORIGIN_SHOW = [
-    ("Japón", "car-skyline.jpg", "JDM de los 90 y coches para drift: Skyline, Supra, Silvia, 350Z."),
-    ("EE. UU.", "car-mustang-boss.jpg", "Muscle cars y clásicos americanos: Mustang, Camaro, Charger, Corvette."),
-    ("Dubái", "car-urus.jpg", "SUV y deportivos de lujo con pocos kilómetros: Urus, G63, Range Rover."),
-    ("Alemania", "car-mercedes-e500.jpg", "Clásicos y deportivos alemanes: E 500 W124, E30, Porsche 911, BMW M."),
+    ("Japón", "japon", "car-skyline.jpg", "JDM de los 90 y coches para drift: Skyline, Supra, Silvia, 350Z."),
+    ("EE. UU.", "estados-unidos", "car-mustang-boss.jpg", "Muscle cars y clásicos americanos: Mustang, Camaro, Charger, Corvette."),
+    ("Dubái", "dubai", "car-urus.jpg", "SUV y deportivos de lujo con pocos kilómetros: Urus, G63, Range Rover."),
+    ("Alemania", "alemania", "car-mercedes-e500.jpg", "Clásicos y deportivos alemanes: E 500 W124, E30, Porsche 911, BMW M."),
 ]
 
 
-def origins_html(p):
-    return "".join(f'<li class="rv"><div class="car-media">{photo(p, img, f"Coche importado desde {o}", sizes="(max-width: 1020px) 50vw, 25vw")}</div>'
-                   f'<h3>{o}</h3><p>{e(t)}</p></li>' for o, img, t in ORIGIN_SHOW)
+def origins_html(p, items=None):
+    items = items if items is not None else ORIGIN_SHOW
+    return "".join(
+        f'<li class="rv"><a class="o-card" href="{p.href(f"importar/{slug}/index.html")}">'
+        f'<div class="car-media">{photo(p, img, "", sizes="(max-width: 1020px) 50vw, 25vw")}</div>'
+        f'<h3>{o}</h3><p>{e(t)}</p><span class="link">Cómo importar de {o}</span></a></li>' for o, slug, img, t in items)
 
 
 def page_about():
@@ -650,15 +759,15 @@ def page_about():
 </section>
 <section class="section surface">
   <div class="wrap">
-    <div class="g12 head rv"><h2>Cómo hacemos las importaciones</h2><p>Siete pasos, en este orden. Tú eliges el coche y nosotros hacemos el resto.</p></div>
+    <div class="g12 head rv"><h2>Cómo hacemos las importaciones</h2><p>Siete pasos, en este orden. Tú eliges el coche y nosotros hacemos el resto. <a class="link" href="{p.href("importar/index.html")}">Qué se paga en cada país</a></p></div>
     <figure class="banner">{photo(p, "barco.jpg", "Barco portacoches navegando al atardecer", sizes="100vw")}</figure>
     <ol class="g12 steps rv">{steps}</ol>
   </div>
 </section>
 {closing(p)}"""
-    return p, layout(p, "Cómo trabajamos | Importación de coches - Busco Tu Coche",
-                     "Cómo importamos coches de lujo, clásicos, drift y competición desde Dubái, EE. UU., Japón y Alemania. Proceso transparente llave en mano.",
-                     "nosotros", main)
+    return p, layout(p, "Cómo trabajamos: importar tu coche paso a paso | Busco Tu Coche",
+                     "Buscamos el coche, lo revisamos en origen, lo compramos con contrato y pago seguro, lo traemos y lo matriculamos en España. Así importamos tu coche.",
+                     "nosotros", main, crumbs=[("Cómo trabajamos", p.path)], page_type="AboutPage")
 
 
 def page_street():
@@ -681,9 +790,10 @@ def page_street():
   </div>
 </section>
 {closing(p)}"""
-    return p, layout(p, "Coches de calle | Importación de coches premium y clásicos - Busco Tu Coche",
-                     "Importa clásicos, deportivos, SUV de lujo y berlinas desde Dubái, EE. UU., Japón y Alemania. Listos para circular en España.",
-                     "calle", main, og_img="car-urus.jpg")
+    title = "Importar coches clásicos y de lujo a España | Busco Tu Coche"
+    desc = "Clásicos, muscle cars, deportivos, SUV y berlinas de lujo de EE. UU., Japón, Dubái y Alemania. Mira ejemplos con su ficha y pide tu estudio gratis."
+    return p, layout(p, title, desc, "calle", main, og_img="car-urus.jpg", crumbs=[("Coches de calle", p.path)],
+                     ld=[service_ld(p, "Importación de coches de calle", "Importación de vehículos", desc, [c[0] for c in STREET_CARS])])
 
 
 def page_race():
@@ -704,9 +814,10 @@ def page_race():
   </div>
 </section>
 {closing(p, "¿Tienes uno en mente?")}"""
-    return p, layout(p, "Competición y drift | Coches configurables - Busco Tu Coche",
-                     "Importa y configura coches de competición y drift: BMW 325i E30, Skyline R34, 350Z, E46 y más.",
-                     "competicion", main, og_img="car-bmw-drift.jpg")
+    title = "Coches de competición y drift importados | Busco Tu Coche"
+    desc = "BMW 325i E30, Skyline R34, 350Z, E46 y Mustang de circuito: importamos y preparamos tu coche de competición o drift a medida. Configúralo y pide presupuesto."
+    return p, layout(p, title, desc, "competicion", main, og_img="car-bmw-drift.jpg", crumbs=[("Competición y drift", p.path)],
+                     ld=[service_ld(p, "Importación y preparación de coches de competición", "Importación y preparación de vehículos de competición", desc, [c[0] for c in RACE_CARS])])
 
 
 def page_drift():
@@ -724,9 +835,11 @@ def page_drift():
                      side=f'<ul class="tags" aria-label="Qué puedes configurar">{feats}</ul>') + f"""
 <section class="section" style="padding-top:0"><div class="wrap">{levels}</div></section>
 {closing(p, "¿Cuál es el tuyo?")}"""
-    return p, layout(p, "Drift en 72 horas | Coches preparados para derrapar - Busco Tu Coche",
-                     "Coches de drift listos en 72 horas: BMW E36 y E46, Lexus IS200 e IS300, Supra, Silvia S13 y S14, M3, Mustang GT, Charger y GT86.",
-                     "drift", main, og_img="drift-mustang-gt.jpg")
+    title = "Coche de drift listo en 72 horas | Busco Tu Coche"
+    desc = "Elige nivel y coche (E36, E46, IS300, Silvia, Supra, M3, GT86, Mustang…) y configura suspensión, ángulo, diferencial y jaula. Listo para derrapar en 72 horas."
+    models = [n for _, _, _, items in DRIFT_LEVELS for n, *_ in items]
+    return p, layout(p, title, desc, "drift", main, og_img="drift-mustang-gt.jpg", crumbs=[("Drift en 72 horas", p.path)],
+                     ld=[service_ld(p, "Drift en 72 horas", "Preparación de coches de drift", desc, models)])
 
 
 def page_perks():
@@ -749,8 +862,9 @@ def page_perks():
   </div>
 </section>
 {closing(p)}"""
-    return p, layout(p, "Ventajas | Por qué importar con Busco Tu Coche",
-                     "Transparencia total, garantía legal, acceso global y trámites llave en mano.", "ventajas", main)
+    return p, layout(p, "Por qué importar tu coche con nosotros | Busco Tu Coche",
+                     "Coste total por escrito antes de decidir, contrato y factura legal, y todos los trámites de aduana, homologación, ITV y matrícula hechos por nosotros.",
+                     "ventajas", main, og_img="car-skyline.jpg", crumbs=[("Ventajas", p.path)])
 
 
 def page_stock():
@@ -785,8 +899,9 @@ def page_stock():
     <ul class="g12 origins">{pick_models(p)}</ul>
   </div>
 </section>"""
-    return p, layout(p, "Coches en stock | Disponibles ahora - Busco Tu Coche",
-                     "Coches importados disponibles ahora mismo para entrega rápida en España.", "stock", main)
+    return p, layout(p, "Coches importados en stock | Busco Tu Coche",
+                     "Coches importados disponibles ahora mismo para entrega rápida en España. Si no está el tuyo, lo importamos por encargo.",
+                     "stock", main, og_img="car-mercedes-g.jpg", index=bool(stock), crumbs=[("Stock", p.path)])
 
 
 def field(label, name, kind="text", placeholder="", required=False, full=False, opts=None, auto=""):
@@ -854,7 +969,8 @@ def page_upload():
     </aside>
   </div>
 </section>"""
-    return p, layout(p, "Sube tu anuncio | Stock - Busco Tu Coche", "Publica tu coche en el stock de Busco Tu Coche.", "stock", main)
+    return p, layout(p, f"Sube tu anuncio | {BRAND}", f"Publica tu coche en el stock de {BRAND}.", "stock", main, index=False,
+                     crumbs=[("Stock", "stock/index.html"), ("Subir anuncio", p.path)])
 
 
 def pick_models(p):
@@ -911,10 +1027,10 @@ def page_contact():
     <ul class="g12 origins">{pick_models(p)}</ul>
   </div>
 </section>
-<section class="section surface"><div class="wrap">{faq_html("Antes de escribirnos")}</div></section>"""
-    return p, layout(p, "Contacto | Pide tu estudio de importación gratis - Busco Tu Coche",
-                     f"Pide tu estudio de importación gratis. WhatsApp y teléfono {PHONE_DISPLAY}. Respuesta en menos de 24 horas.",
-                     "contacto", main, faq_jsonld())
+<section class="section surface"><div class="wrap">{faq_html("Antes de escribirnos", FAQ, f'<a class="link" href="{p.href("importar/index.html")}">Guía para importar un coche a España</a>')}</div></section>"""
+    return p, layout(p, "Presupuesto gratis para importar tu coche | Busco Tu Coche",
+                     f"Dinos qué coche buscas y te mandamos un estudio de importación gratis y sin compromiso en menos de 24 horas. WhatsApp y teléfono {PHONE_DISPLAY}.",
+                     "contacto", main, og_img="car-camaro.jpg", ld=[faq_ld(FAQ)], crumbs=[("Contacto", p.path)], page_type="ContactPage")
 
 
 def page_config():
@@ -925,7 +1041,7 @@ def page_config():
         if k not in seen:
             seen.add(k); all_c.append((n, img))
     picks = "".join(
-        f'<label class="pick"><input type="radio" name="coche" value="{e(n)}" data-img="{p.asset("img/" + img.replace(".jpg", "-sm.jpg"))}"{" checked" if i == 0 else ""}>'
+        f'<label class="pick"><input type="radio" name="coche" value="{e(n)}" data-img="{p.asset("img/" + img.replace(".jpg", "-sm.jpg"))}" data-pos="{pos(img)}"{" checked" if i == 0 else ""}>'
         f'{photo(p, img.replace(".jpg", "-sm.jpg"), "", sizes="25vw")}<span>{e(n)}</span></label>'
         for i, (n, img) in enumerate(all_c))
     sets = ""
@@ -945,7 +1061,7 @@ def page_config():
     </div>
     <aside class="panel summary" aria-label="Resumen de tu configuración">
       <h2>Tu configuración</h2>
-      <figure class="summary-photo"><img id="sum-photo" src="{p.asset("img/" + all_c[0][1].replace(".jpg", "-sm.jpg"))}" alt="" width="600" height="400"></figure>
+      <figure class="summary-photo"><img id="sum-photo" src="{p.asset("img/" + all_c[0][1].replace(".jpg", "-sm.jpg"))}" alt="" width="600" height="400" style="object-position:{pos(all_c[0][1])}"></figure>
       <dl>
         <div><dt>Coche</dt><dd id="sum-coche"></dd></div>
         <div><dt>Ruedas</dt><dd id="sum-ruedas"></dd></div>
@@ -960,8 +1076,140 @@ def page_config():
     </aside>
   </div>
 </section>"""
-    return p, layout(p, "Configurador | Prepara tu coche de competición - Busco Tu Coche",
-                     "Configura ruedas, suspensión, alerón y motor de tu coche de competición o drift y pide presupuesto.", "competicion", main)
+    return p, layout(p, "Configurador de coches de competición y drift | Busco Tu Coche",
+                     "Elige coche, ruedas, suspensión, alerón y preparación de motor, y pide por WhatsApp el presupuesto de tu configuración de competición o drift.",
+                     "competicion", main, og_img="car-bmw-325.jpg", crumbs=[("Competición y drift", "servicios/competicion/index.html"), ("Configurador", p.path)])
+
+
+def facts_html(rows):
+    return '<dl class="facts">' + "".join(f"<div><dt>{e(k)}</dt><dd>{e(v)}</dd></div>" for k, v in rows) + "</dl>"
+
+
+def updated_html():
+    return f'<p class="updated">Actualizado en <time datetime="{UPDATED}">{UPDATED_TEXT}</time>. Información orientativa: el cálculo exacto para tu coche te lo damos por escrito en el estudio gratuito.</p>'
+
+
+def sources_html():
+    items = "".join(f'<li><a href="{e(u)}" target="_blank" rel="noopener">{e(t)}</a></li>' for t, u in SOURCES)
+    return f'<div class="sources"><h2>Fuentes</h2><ul>{items}</ul></div>'
+
+
+def compare_html():
+    head = "".join(f'<th scope="col">{e(c)}</th>' for c in COMPARE_COLS)
+    rows = "".join(
+        f'<tr><th scope="row">{e(k)}</th>' + "".join(f'<td data-label="{e(c)}">{e(v)}</td>' for c, v in zip(COMPARE_COLS, vals)) + "</tr>"
+        for k, vals in COMPARE)
+    return f'<table class="compare"><caption class="sr-only">Qué se paga al importar un coche a España según el país de origen</caption><thead><tr><td></td>{head}</tr></thead><tbody>{rows}</tbody></table>'
+
+
+def iedmt_html():
+    rows = "".join(f'<tr><th scope="row">{e(k)}</th><td>{e(v)}</td></tr>' for k, v in IEDMT)
+    return (f'<table class="compare narrow"><caption class="sr-only">Tipos del impuesto de matriculación según las emisiones de CO₂</caption>'
+            f'<thead><tr><th scope="col">Emisiones de CO₂</th><th scope="col">Tipo</th></tr></thead><tbody>{rows}</tbody></table>')
+
+
+GUIDE_CARDS = [(g["short"], g["slug"], g["img"], g["card"]) for g in ORIGIN_GUIDES]
+
+
+def page_guide():
+    p = Page("importar/index.html")
+    steps = "".join(f'<li><h3>{e(t)}</h3><p>{e(d)}</p></li>' for t, d in GUIDE_STEPS)
+    side = f'{updated_html()}<a class="btn" href="{p.contact()}">Pedir estudio gratis</a>'
+    main = page_head(p, "Cómo importar un coche", "Cómo importar", "barco.jpg", "un coche",
+                     "Importar un coche a España tiene seis pasos: elegirlo, comprarlo, traerlo, pasar la aduana si viene de fuera "
+                     "de la UE, homologarlo y matricularlo. Lo que pagas depende sobre todo del país de origen y de las emisiones "
+                     "del coche. Aquí lo tienes explicado, país por país.", side=side, long=True) + f"""
+<section class="section" style="padding-top:0">
+  <div class="wrap">
+    <div class="g12 head rv"><h2>Elige el país</h2><p>Cada origen tiene sus impuestos y sus papeles. Pulsa en uno para ver su guía.</p></div>
+    <ul class="g12 origins">{origins_html(p, GUIDE_CARDS)}</ul>
+  </div>
+</section>
+<section class="section surface">
+  <div class="wrap">
+    <div class="g12 head rv"><h2>Paso a paso</h2><p>Lo que hay que hacer, en este orden. Nosotros nos ocupamos de todo.</p></div>
+    <ol class="g12 steps rv">{steps}</ol>
+  </div>
+</section>
+<section class="section">
+  <div class="wrap">
+    <div class="g12 head rv"><h2>Qué se paga</h2><p>Lo que cambia según de dónde venga el coche. El valor en aduana es el precio más el transporte y el seguro.</p></div>
+    {compare_html()}
+  </div>
+</section>
+<section class="section surface">
+  <div class="wrap g12 split rv">
+    <div>
+      <h2 class="h-mid">Impuesto de matriculación</h2>
+      <p>Se paga en España al matricular el coche, venga de donde venga. El tipo depende de las emisiones de CO₂ y, en un coche usado, se aplica sobre su valor según las tablas de Hacienda.</p>
+      <p class="small">Tipos de la península y Baleares. En Canarias son más bajos.</p>
+    </div>
+    <div>{iedmt_html()}</div>
+  </div>
+</section>
+<section class="section">
+  <div class="wrap g12 split rv">
+    <div>
+      <h2 class="h-mid">Coches clásicos y vehículos históricos</h2>
+      <p>Un coche con 30 años o más desde que se fabricó o se matriculó por primera vez, cuyo modelo ya no se fabrica y que conserva su estado original, puede matricularse en España como vehículo histórico (Real Decreto 892/2024). Un coche importado sigue el procedimiento ordinario, con el informe de un servicio técnico de vehículos históricos.</p>
+      <p>Después pasa la ITV con menos frecuencia: cada 2 años entre los 30 y los 40 años, cada 3 entre los 40 y los 45, cada 4 entre los 45 y los 60, y a partir de los 60 queda exento.</p>
+    </div>
+    <div>
+      <h2 class="h-mid">En la aduana</h2>
+      <p>Algunos clásicos en estado original pueden declararse como objeto de colección (partida arancelaria 9705), sin arancel y con un IVA de importación del 10 %. Aduanas lo decide coche a coche y no basta con la edad, así que lo presupuestamos con los impuestos normales salvo que esté confirmado.</p>
+    </div>
+  </div>
+</section>
+<section class="section surface"><div class="wrap">{faq_html("Preguntas frecuentes", GUIDE_FAQ)}</div></section>
+<section class="section"><div class="wrap">{sources_html()}</div></section>
+{cta_band(p, "¿Calculamos el tuyo?", "Dinos qué coche buscas y de dónde. Te mandamos el coste total por escrito, gratis, en menos de 24 horas.")}"""
+    title = "Cómo importar un coche a España: guía 2026 | Busco Tu Coche"
+    desc = "Pasos, papeles e impuestos para importar un coche a España desde EE. UU., Japón, Dubái o Alemania: aduana, arancel, IVA, homologación, ITV y matrícula."
+    return p, layout(p, title, desc, "", main, og_img="barco.jpg", og_type="article", crumbs=[("Cómo importar un coche", p.path)],
+                     ld=[article_ld(p, "Cómo importar un coche a España", desc, "barco.jpg"), faq_ld(GUIDE_FAQ)])
+
+
+def page_origin(g):
+    p = Page(f"importar/{g['slug']}/index.html")
+    hub = ("Cómo importar un coche", "importar/index.html")
+    cars = ""
+    for c in all_cars():
+        if c["o"] == g["key"] and img_exists(c["img"]):
+            act = f'<a class="link" href="{p.contact(f"{c["name"]} {c["year"]}")}">Pedir presupuesto de este coche</a>'
+            cars += car_item(p, c["name"], origin_meta(c["year"], c["o"], c["name"]), c["img"], "", act)
+    papers = "".join(f"<li>{e(x)}</li>" for x in g["papers"])
+    notes = "".join(f"<li>{e(x)}</li>" for x in g["notes"])
+    others = [(o["short"], o["slug"], o["img"], o["card"]) for o in ORIGIN_GUIDES if o["slug"] != g["slug"]]
+    side = f'{updated_html()}<a class="btn" href="{p.contact()}">Pedir estudio gratis</a>'
+    main = page_head(p, g["name"], "Importar de", g["img"], g["short"], e(g["lead"]), side=side, mid=[hub]) + f"""
+<section class="section" style="padding-top:0">
+  <div class="wrap g12 split rv">
+    <div><h2 class="h-mid">Qué se paga</h2><p>Los impuestos y gastos de traer un coche de {e(g["name"])} a España.</p></div>
+    <div>{facts_html(g["pay"])}</div>
+  </div>
+</section>
+<section class="section surface">
+  <div class="wrap g12 split rv">
+    <div><h2 class="h-mid">Papeles que hacen falta</h2><ul class="values">{papers}</ul></div>
+    <div><h2 class="h-mid">Lo que hay que saber</h2><ul class="values">{notes}</ul></div>
+  </div>
+</section>
+<section class="section">
+  <div class="wrap">
+    <div class="g12 head rv"><h2>Coches que traemos de {e(g["short"])}</h2><p>Son ejemplos. Si buscas otro modelo, también lo traemos.</p></div>
+    <div class="cars">{cars}</div>
+  </div>
+</section>
+<section class="section surface"><div class="wrap">{faq_html("Preguntas frecuentes", g["faq"], f'<a class="link" href="{p.href(hub[1])}">Guía general para importar un coche</a>')}</div></section>
+<section class="section">
+  <div class="wrap">
+    <div class="g12 head rv"><h2>Otros países</h2><p>Compara con los otros mercados donde buscamos.</p></div>
+    <ul class="g12 origins three">{origins_html(p, others)}</ul>
+  </div>
+</section>
+{cta_band(p, "¿Lo traemos por ti?", f"Dinos qué coche buscas en {g['name']}. Te mandamos el coste total por escrito, gratis, en menos de 24 horas.")}"""
+    return p, layout(p, g["title"], g["desc"], "", main, og_img=g["img"], og_type="article", crumbs=[hub, (g["name"], p.path)],
+                     ld=[article_ld(p, f"Importar un coche de {g['name']} a España", g["desc"], g["img"]), faq_ld(g["faq"])])
 
 
 def plain_head(p, crumb, title, lead):
@@ -1017,8 +1265,8 @@ def page_legal():
 <h2>Cookies</h2>
 <p>Esta web no usa cookies de análisis ni de publicidad. Las tipografías se sirven desde nuestro propio servidor.</p>
 </div></section>"""
-    return [(p1, layout(p1, f"Aviso legal - {BRAND}", f"Aviso legal de {BRAND}.", "", main1)),
-            (p2, layout(p2, f"Política de privacidad - {BRAND}", f"Política de privacidad de {BRAND}.", "", main2))]
+    return [(p1, layout(p1, f"Aviso legal | {BRAND}", f"Aviso legal de {BRAND}.", "", main1, index=False)),
+            (p2, layout(p2, f"Política de privacidad | {BRAND}", f"Política de privacidad de {BRAND}.", "", main2, index=False))]
 
 
 def page_credits():
@@ -1034,7 +1282,7 @@ def page_credits():
 <p>Los coches de las fotos son ejemplos de los modelos que importamos; no son unidades a la venta salvo que aparezcan en la sección de stock.</p>
 <ul class="g12 credits">{rows}</ul>
 </div></section>"""
-    return p, layout(p, f"Créditos de las fotos - {BRAND}", f"Autores y licencias de las fotos de {BRAND}.", "", main)
+    return p, layout(p, f"Créditos de las fotos | {BRAND}", f"Autores y licencias de las fotos de {BRAND}.", "", main, index=False)
 
 
 def page_404():
@@ -1044,12 +1292,70 @@ def page_404():
   <p class="lead" style="margin-top:32px">Puede que el enlace esté mal escrito o que la página se haya movido.</p>
   <div class="form-actions"><a class="btn" href="/">Ir al inicio</a><a class="btn btn-wa" href="{wa()}" target="_blank" rel="noopener">{WA_ICON}Escribir por WhatsApp</a></div>
 </div></section>"""
-    return p, layout(p, f"Página no encontrada - {BRAND}", "La página que buscas no existe.", "", main)
+    return p, layout(p, f"Página no encontrada | {BRAND}", "La página que buscas no existe.", "", main, index=False)
 
 
 # =====================================================================
 # GENERACIÓN
 # =====================================================================
+def llms_txt():
+    def line(path, label):
+        return f"- [{label}]({Page(path).url()}): {INDEX[path][2]}"
+    guides = "\n".join(line(f"importar/{g['slug']}/index.html", f"Importar un coche de {g['name']} a España") for g in ORIGIN_GUIDES)
+    faq = "\n".join(f"- **{q}** {a}" for q, a in FAQ)
+    return f"""# {BRAND}
+
+> {ORG_DESC}
+
+{BRAND} (también buscotuclasico.com) es un servicio de importación de coches con sede en {CITY}. Busca el coche que pide el cliente en Estados Unidos, Japón, Dubái o Alemania, lo revisa en persona en origen, lo compra con contrato y pago seguro (cuenta escrow o garantía equivalente), lo trae a España y se ocupa de la aduana, la homologación, la ITV y la matrícula. El cliente recibe un estudio de importación gratuito con el coste total por escrito antes de decidir.
+
+- Teléfono y WhatsApp: {PHONE_DISPLAY}
+- Email: {EMAIL}
+- Web: {SITE}/
+- Los coches de la web son ejemplos de modelos que importamos; el stock disponible está en {Page("stock/index.html").url()}
+
+## Servicios
+
+{line("servicios/calle/index.html", "Coches de calle")}
+{line("servicios/competicion/index.html", "Competición y drift")}
+{line("drift-72h/index.html", "Drift en 72 horas")}
+{line("configurador/index.html", "Configurador")}
+{line("nosotros/index.html", "Cómo trabajamos")}
+{line("contacto/index.html", "Pedir presupuesto")}
+
+## Guías para importar un coche a España (actualizadas en {UPDATED_TEXT})
+
+{line("importar/index.html", "Cómo importar un coche a España")}
+{guides}
+
+## Preguntas frecuentes
+
+{faq}
+"""
+
+
+def write_static():
+    """Iconos, manifiesto, robots.txt, sitemap.xml y llms.txt en la raíz de la web."""
+    static = os.path.join(ROOT, "static")
+    for f in os.listdir(static):
+        shutil.copy(os.path.join(static, f), os.path.join(OUT, f))
+    if not DOMAIN or PREVIEW:
+        return
+    with open(os.path.join(OUT, "CNAME"), "w") as f:
+        f.write(DOMAIN + "\n")
+    urls = "".join(f"<url><loc>{Page(path).url()}</loc><lastmod>{UPDATED}</lastmod></url>"
+                   for path, (index, _, _) in INDEX.items() if index)
+    with open(os.path.join(OUT, "sitemap.xml"), "w") as f:
+        f.write(f'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>\n')
+    bots = ["Googlebot", "Bingbot", "GPTBot", "OAI-SearchBot", "ChatGPT-User", "ClaudeBot", "Claude-SearchBot", "Claude-User",
+            "PerplexityBot", "Perplexity-User", "Google-Extended", "Applebot", "Applebot-Extended"]
+    with open(os.path.join(OUT, "robots.txt"), "w") as f:
+        f.write("# Buscadores y asistentes de IA: bienvenidos\n" + "".join(f"User-agent: {b}\n" for b in bots)
+                + "Allow: /\n\nUser-agent: *\nAllow: /\n\n" + f"Sitemap: {SITE}/sitemap.xml\n")
+    with open(os.path.join(OUT, "llms.txt"), "w", encoding="utf-8") as f:
+        f.write(llms_txt())
+
+
 def main():
     if os.path.exists(OUT):
         shutil.rmtree(OUT)
@@ -1057,6 +1363,7 @@ def main():
     shutil.copytree(os.path.join(ROOT, "assets"), os.path.join(OUT, "assets"), ignore=shutil.ignore_patterns("README*"))
 
     pages = [page_home(), page_about(), page_street(), page_race(), page_drift(), page_perks(),
+             page_guide()] + [page_origin(g) for g in ORIGIN_GUIDES] + [
              page_stock(), page_upload(), page_contact(), page_config(), page_credits(), page_404()]
     pages += page_legal()
     for p, content in pages:
@@ -1066,16 +1373,7 @@ def main():
             f.write(content)
 
     open(os.path.join(OUT, ".nojekyll"), "w").close()
-    if DOMAIN and not PREVIEW:
-        with open(os.path.join(OUT, "CNAME"), "w") as f:
-            f.write(DOMAIN + "\n")
-        urls = "".join(
-            f"<url><loc>https://{DOMAIN}/{p.path[:-len('index.html')] if p.path.endswith('index.html') else p.path}</loc></url>"
-            for p, _ in pages if p.path != "404.html")
-        with open(os.path.join(OUT, "sitemap.xml"), "w") as f:
-            f.write(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>\n')
-        with open(os.path.join(OUT, "robots.txt"), "w") as f:
-            f.write(f"User-agent: *\nAllow: /\nSitemap: https://{DOMAIN}/sitemap.xml\n")
+    write_static()
     print(f"Web generada en {OUT}: {len(pages)} páginas")
 
 
