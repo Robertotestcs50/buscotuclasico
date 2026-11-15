@@ -12,6 +12,7 @@ o data/stock.json, y vuelve a ejecutar el script.
 import html
 import json
 import os
+import re
 import shutil
 import sys
 from urllib.parse import quote
@@ -67,7 +68,7 @@ STREET_CARS = [
 RACE_CARS = [
     ("BMW 325i E30", 1988, "de", "car-bmw-325.jpg", "circuito", "e30", "#f2f2f2", 25),
     ("Nissan Skyline R34 GT-R", 1999, "jp", "car-skyline.jpg", "circuito", "jdm", "#2a5bd7", 34),
-    ("Motor V8 Competición", 2023, "usa", "car-competition.jpg", "circuito", "race", "#e0412f", 8),
+    ("Ford Mustang V8 de circuito", 2023, "usa", "car-competition.jpg", "circuito", "race", "#e0412f", 8),
     ("Nissan 350Z Drift Spec", 2006, "jp", "car-350z-drift.jpg", "drift", "jdm", "#f97316", None),
     ("BMW Serie 3 E46 Drift", 2004, "de", "car-bmw-drift.jpg", "drift", "sedan", "#e8eaed", None),
 ]
@@ -104,7 +105,7 @@ SPECS = {
     "Mercedes-Benz E 500": ("W124", "V8 5.0", "326 CV", "Propulsión"),
     "BMW 325i E30": ("E30", "6 en línea 2.5", "170 CV", "Propulsión"),
     "Nissan Skyline R34 GT-R": ("BNR34", "RB26DETT 2.6 biturbo", "280 CV", "4x4 ATTESA"),
-    "Motor V8 Competición": ("", "V8 de competición", "", "Propulsión"),
+    "Ford Mustang V8 de circuito": ("", "V8 de competición", "", "Propulsión"),
     "Nissan 350Z Drift Spec": ("Z33", "V6 3.5", "", "Propulsión"),
     "BMW Serie 3 E46 Drift": ("E46", "6 en línea", "", "Propulsión"),
     "BMW Serie 3 E36": ("E36", "6 en línea", "", "Propulsión"),
@@ -222,7 +223,7 @@ KEYS = {
     "Ford Mustang GT 5.0": "ford mustang gt 5.0 s550 coyote",
     "Nissan 350Z Drift Spec": "nissan 350z z33 fairlady",
     "BMW Serie 3 E46 Drift": "bmw e46 serie 3 330 drift",
-    "Motor V8 Competición": "v8 competicion circuito",
+    "Ford Mustang V8 de circuito": "v8 competicion circuito mustang",
 }
 
 
@@ -309,32 +310,29 @@ def header(p, active):
 
 def footer(p):
     return f"""<footer class="footer">
-  <div class="wrap">
-    <div class="g12 footer-top">
-      <div class="notes">
-        {mark(p)}
-        <p>Importamos coches de Dubái, EE. UU., Japón y Alemania y te los entregamos matriculados en España.</p>
-        <p>{CITY}. Te atendemos por WhatsApp, teléfono y email.</p>
-      </div>
-      <a class="up" href="#main">Volver arriba</a>
+  <div class="wrap g12 footer-grid">
+    <div class="f-brand">
+      {mark(p)}
+      <p>Importamos coches de Dubái, EE. UU., Japón y Alemania y te los entregamos matriculados en España. {CITY}.</p>
     </div>
-    <div class="footer-big">
-      <a class="tel" href="tel:{PHONE_TEL}" aria-label="Llamar al {PHONE_DISPLAY}">{PHONE_DISPLAY.replace("+34 ", "")}</a>
-      <div class="alt">
-        <a href="{wa()}" target="_blank" rel="noopener">Escribir por WhatsApp</a>
-        <a href="mailto:{EMAIL}">{EMAIL}</a>
-      </div>
+    <div class="f-contact">
+      <a class="tel" href="tel:{PHONE_TEL}" aria-label="Llamar al {PHONE_DISPLAY}">{PHONE_DISPLAY}</a>
+      <a href="{wa()}" target="_blank" rel="noopener">Escribir por WhatsApp</a>
+      <a href="mailto:{EMAIL}">{EMAIL}</a>
     </div>
-    <div class="footer-meta">
-      <ul>
-        <li><a href="{p.href("ventajas/index.html")}">Ventajas</a></li>
-        <li><a href="{p.contact()}">Contacto</a></li>
-        <li><a href="{p.href("aviso-legal/index.html")}">Aviso legal</a></li>
-        <li><a href="{p.href("privacidad/index.html")}">Privacidad</a></li>
-      </ul>
-      <p class="c">Fotos de Wikimedia Commons. <a href="{p.href("creditos/index.html")}">Autores y licencias</a></p>
-      <p class="r">© {YEAR} {BRAND}</p>
-    </div>
+    <ul class="f-links">
+      <li><a href="{p.href("servicios/calle/index.html")}">Coches de calle</a></li>
+      <li><a href="{p.href("servicios/competicion/index.html")}">Competición</a></li>
+      <li><a href="{p.href("drift-72h/index.html")}">Drift en 72 h</a></li>
+      <li><a href="{p.href("nosotros/index.html")}">Cómo trabajamos</a></li>
+      <li><a href="{p.href("ventajas/index.html")}">Ventajas</a></li>
+      <li><a href="{p.href("stock/index.html")}">Stock</a></li>
+      <li><a href="{p.contact()}">Contacto</a></li>
+    </ul>
+  </div>
+  <div class="wrap footer-meta">
+    <p>© {YEAR} {BRAND}</p>
+    <p><a href="{p.href("aviso-legal/index.html")}">Aviso legal</a> <a href="{p.href("privacidad/index.html")}">Privacidad</a> <a href="{p.href("creditos/index.html")}">Créditos de las fotos</a></p>
   </div>
   <a class="wa-float" href="{wa()}" target="_blank" rel="noopener" aria-label="Escribir por WhatsApp al {PHONE_DISPLAY}">{WA_ICON}</a>
 </footer>"""
@@ -401,15 +399,8 @@ def page_head(p, crumb, w1, img, w2, lead, side="", long=False):
 </section>"""
 
 
-def closing(p, title="¿Lo buscamos?", text="Dinos marca, modelo, año y presupuesto, y te mandamos un estudio gratis en menos de 24 horas."):
-    return f"""<section class="section surface">
-  <div class="wrap g12 head rv" style="margin-bottom:0">
-    <h2>{e(title)}</h2>
-    <div class="close-side"><p>{e(text)}</p>
-      <div class="form-actions"><a class="btn" href="{p.contact()}">Pedir presupuesto</a>
-      <a class="btn btn-wa" href="{wa()}" target="_blank" rel="noopener">{WA_ICON}WhatsApp</a></div></div>
-  </div>
-</section>"""
+def closing(p, title="¿Lo buscamos por ti?", text="Dinos marca, modelo, año y presupuesto. Te mandamos un estudio gratis en menos de 24 horas."):
+    return cta_band(p, title, text)
 
 
 def specs_html(name):
@@ -449,10 +440,14 @@ def filters_html(target, options):
     return f'<div class="filters" role="group" aria-label="Filtrar coches" data-filter-group="{target}">{chips}</div>'
 
 
-def faq_rows(title):
-    rows = f'<div class="g12 faq-row rv"><h2>{e(title)}</h2></div>'
-    rows += "".join(f'<div class="g12 faq-row rv"><h3>{e(q)}</h3><p>{e(a)}</p></div>' for q, a in FAQ)
-    return rows
+def faq_html(title, items=None, more=""):
+    items = items if items is not None else FAQ
+    rows = "".join(f'<details class="qa"><summary>{e(q)}</summary><p>{e(a)}</p></details>' for q, a in items)
+    more_html = f'<p class="qa-more">{more}</p>' if more else ""
+    return f'''<div class="g12 faq">
+  <div class="faq-head"><h2>{e(title)}</h2><p>Pulsa en una pregunta para ver la respuesta.</p></div>
+  <div class="faq-list">{rows}{more_html}</div>
+</div>'''
 
 
 def faq_jsonld():
@@ -461,22 +456,43 @@ def faq_jsonld():
     return f'<script type="application/ld+json">{json.dumps(data, ensure_ascii=False)}</script>'
 
 
-FIELDS = [
-    ("f-surface", "", "Sin sorpresas", "Te damos el coste total por escrito antes de decidir y un informe en cada paso. Sin costes ocultos."),
-    ("f-field", "alt", "Todo en regla", "Contrato formal, factura legal y la documentación completa del coche. Respaldo legal durante todo el proceso."),
-    ("f-ink", "", "Tú solo conduces", "Aduanas, homologación, ITV y matriculación corren de nuestra cuenta. Tú recibes las llaves y los papeles."),
+PERK_TILES = [
+    ("t-surface", "Sin sorpresas", "Te damos el coste total por escrito antes de decidir y un informe en cada paso."),
+    ("t-field", "Todo en regla", "Contrato, factura legal y toda la documentación del coche. Respaldo legal en todo el proceso."),
+    ("t-ink", "Tú solo conduces", "Aduanas, homologación, ITV y matrícula corren de nuestra cuenta. Tú recibes las llaves."),
+    ("t-accent", "Lo que aquí no hay", "Coches de Dubái, EE. UU., Japón y Alemania que no encuentras en el mercado europeo."),
 ]
 
 
-def fields_html(p, with_drift=True, tag="h2"):
-    out = ""
-    for cls, alt, title, text in FIELDS:
-        out += f'<section class="fieldx {cls} {alt} rv"><p>{e(text)}</p><{tag}>{e(title)}</{tag}></section>'
-    if with_drift:
-        out += (f'<section class="fieldx f-accent alt rv"><p>Eliges tu nivel y tu coche, configuras suspensión, ángulo, diferencial, hidráulico, '
-                f'baquets y jaula, y te lo entregamos listo para derrapar. <a class="link" href="{p.href("drift-72h/index.html")}">Elegir mi coche de drift</a></p>'
-                f'<{tag}>Drift en 72 horas</{tag}></section>')
-    return out
+def tiles_html():
+    return '<ul class="tiles">' + "".join(
+        f'<li class="tile {c} rv"><h3>{e(t)}</h3><p>{e(d)}</p></li>' for c, t, d in PERK_TILES) + "</ul>"
+
+
+STEP_SHOW = [
+    ("Buscamos", "car-skyline.jpg", "Localizamos la unidad que encaja con tu presupuesto en cuatro mercados."),
+    ("Revisamos", "car-competition.jpg", "La vemos en persona: chasis, mecánica, historial y papeles. Te mandamos informe y fotos."),
+    ("Compramos", "car-mercedes-e500.jpg", "Negociamos, firmamos contrato y el pago va por cuenta escrow o garantía equivalente."),
+    ("Traemos", "barco.jpg", "En contenedor cerrado y asegurado. Aduanas, EORI, aranceles e IVA incluidos."),
+    ("Matriculamos", "car-camaro.jpg", "Homologación, ITV y matrícula española. Te damos las llaves y los papeles."),
+]
+
+
+def steps_show(p):
+    return '<ol class="steps5">' + "".join(
+        f'<li class="rv"><div class="car-media">{photo(p, img, "", sizes="(max-width: 860px) 30vw, 20vw")}</div><h3>{v}</h3><p>{e(t)}</p></li>'
+        for v, img, t in STEP_SHOW) + "</ol>"
+
+
+def cta_band(p, title="¿Lo buscamos por ti?", text="Dinos marca, modelo, año y presupuesto. Te mandamos un estudio gratis en menos de 24 horas."):
+    return f"""<section class="cta-band">
+  <div class="wrap g12">
+    <h2>{e(title)}</h2>
+    <div class="cta-side"><p>{e(text)}</p>
+      <div class="form-actions"><a class="btn btn-light" href="{p.contact()}">Pedir presupuesto</a>
+      <a class="btn btn-wa" href="{wa()}" target="_blank" rel="noopener">{WA_ICON}WhatsApp</a></div></div>
+  </div>
+</section>"""
 
 
 # =====================================================================
@@ -523,19 +539,6 @@ def page_home():
         prev += photo(p, c["img"], n, lazy=True, sizes="40vw", cls="is-on" if i == 0 else "")
     first_cap = f"{index_names[0]}, {by[index_names[0]]['year']}. {SPECS[index_names[0]][1]}, {SPECS[index_names[0]][2]}."
 
-    verbs = [
-        ("Buscamos", "car-skyline.jpg", STEPS[0][1]),
-        ("Revisamos", "car-competition.jpg", STEPS[1][1]),
-        ("Compramos", "car-mercedes-e500.jpg", STEPS[2][1]),
-        ("Traemos", "barco.jpg", "Contenedor cerrado con seguro a todo riesgo hasta el puerto europeo. Allí tramitamos aduanas, EORI, aranceles e IVA."),
-        ("Matriculamos", "car-camaro.jpg", "Homologación individual, ficha técnica reducida, ITV y matrícula española. Te damos las llaves y toda la documentación."),
-    ]
-    verb_html = ""
-    for i, (v, img, txt) in enumerate(verbs):
-        title = '<h2>Así lo traemos</h2>' if i == 0 else ""
-        verb_html += (f'<div class="verb">{photo(p, img, "", lazy=True, sizes="100vw")}'
-                      f'<div class="verb-word"><h3>{v}</h3></div><div class="verb-text">{title}<p>{e(txt)}</p></div></div>')
-
     jsonld = {"@context": "https://schema.org", "@type": "AutoDealer", "name": BRAND,
               "description": "Importación de coches clásicos, JDM, muscle y de lujo desde Dubái, EE. UU., Japón y Alemania a España.",
               "telephone": PHONE_TEL, "email": EMAIL, "areaServed": "España",
@@ -543,6 +546,15 @@ def page_home():
     if DOMAIN:
         jsonld["url"] = f"https://{DOMAIN}/"
     head = (f'<script type="application/ld+json">{json.dumps(jsonld, ensure_ascii=False)}</script>' + faq_jsonld())
+
+    paths = [
+        ("Coches de calle", "car-urus.jpg", "Clásicos, deportivos, SUV y berlinas de lujo.", "servicios/calle/index.html"),
+        ("Competición", "car-bmw-325.jpg", "Coches de circuito y drift, configurables a medida.", "servicios/competicion/index.html"),
+        ("Drift en 72 horas", "drift-mustang-gt.jpg", "Tu coche de drift preparado y listo en tres días.", "drift-72h/index.html"),
+    ]
+    paths_html = "".join(
+        f'<li class="rv"><a class="path" href="{p.href(t)}"><div class="car-media">{photo(p, img, "", sizes="(max-width: 860px) 100vw, 33vw")}</div>'
+        f'<h3>{e(n)}</h3><p>{e(d)}</p><span class="link">Ver coches</span></a></li>' for n, img, d, t in paths)
 
     main = f"""
 <section class="hero">
@@ -554,7 +566,7 @@ def page_home():
         <label for="busco">¿Qué coche buscas?</label>
         <div class="finder-row">
           <input id="busco" name="modelo" type="search" autocomplete="off" placeholder="Por ejemplo: W124, Supra MK4, E30" required>
-          <button class="btn" type="submit">Buscarlo</button>
+          <button class="btn" type="submit">Pedir estudio gratis</button>
         </div>
         <p class="finder-out" id="finder-out" aria-live="polite"></p>
       </form>
@@ -565,48 +577,40 @@ def page_home():
 
 <section class="section">
   <div class="wrap">
-    <div class="g12 head rv"><h2>Leyendas que traemos</h2><p>Clásicos alemanes, JDM de los 90 y muscle cars. Elige uno y te preparamos el estudio de importación de ese modelo.</p></div>
+    <div class="g12 head rv"><h2>¿Qué tipo de coche buscas?</h2><p>Elige por dónde empezar. En cada sección verás ejemplos con su ficha técnica.</p></div>
+    <ul class="paths3">{paths_html}</ul>
+  </div>
+</section>
+
+<section class="section surface">
+  <div class="wrap">
+    <div class="g12 head rv"><h2>Leyendas que traemos</h2><p>Clásicos alemanes, JDM de los 90 y muscle cars. Pulsa en uno y te preparamos el estudio de ese modelo.</p></div>
     <div class="g12">
       <ul class="index-list rv">{rows}</ul>
       <figure class="index-preview"><div class="frame">{prev}</div><figcaption>{e(first_cap)}</figcaption></figure>
     </div>
-    <div class="index-more"><a class="btn btn-ink" href="{p.href("servicios/calle/index.html")}">Ver coches de calle</a><a class="btn btn-ink" href="{p.href("servicios/competicion/index.html")}">Ver competición y drift</a></div>
   </div>
 </section>
-
-<section class="zoom" data-stage="0">
-  <h2 class="sr-only">Lo revisamos antes que tú</h2>
-  <div class="zoom-stage">
-    <div class="zoom-inner" aria-hidden="true">
-      <p class="zoom-h"><span class="a">Lo revisamos</span></p>
-      <div class="zoom-frame" style="--o1: 72% 80%; --o2: 18% 58%">{photo(p, "car-mercedes-e500.jpg", "", lazy=True, sizes="(max-width: 860px) 70vw, 30vw")}</div>
-      <p class="zoom-b">antes que tú</p>
-      <p class="zoom-cap">En origen miramos el chasis, la mecánica, el historial y los papeles. Recibes el informe con fotos antes de comprar.</p>
-    </div>
-  </div>
-</section>
-
-<section class="verbs">{verb_html}</section>
-
-{fields_html(p)}
 
 <section class="section">
-  <div class="wrap">{faq_rows("Antes de importar")}</div>
+  <div class="wrap">
+    <div class="g12 head rv"><h2>Así lo traemos</h2><p>Cinco pasos y uno solo es tuyo: elegir el coche.</p></div>
+    {steps_show(p)}
+  </div>
 </section>
 
-<section class="ask">
-  <h2 class="sr-only">¿Calle o pista?</h2>
-  <p class="ask-q" aria-hidden="true">¿Calle</p>
-  <div class="ask-mid">
-    <div class="ask-row">
-      <a class="btn btn-light" href="{p.href("servicios/calle/index.html")}">Coches de calle</a>
-      <span class="ask-or">o</span>
-      <a class="btn" href="{p.href("servicios/competicion/index.html")}">Competición y drift</a>
-    </div>
-    <p>Elijas lo que elijas, te enviamos un estudio gratis en menos de 24 horas.</p>
+<section class="section surface">
+  <div class="wrap">
+    <div class="g12 head rv"><h2>Por qué con nosotros</h2></div>
+    {tiles_html()}
   </div>
-  <p class="ask-q" aria-hidden="true">o pista?</p>
 </section>
+
+<section class="section">
+  <div class="wrap">{faq_html("Preguntas frecuentes", FAQ[:5], f'<a class="link" href="{p.contact()}">Ver todas las preguntas</a>')}</div>
+</section>
+
+{cta_band(p)}
 """
     return p, layout(p, "Busco Tu Coche | Importación de coches clásicos, JDM, muscle y de lujo",
                      "Importamos coches clásicos, JDM, muscle, de lujo, drift y competición desde Dubái, EE. UU., Japón y Alemania a España. Servicio llave en mano con homologación y matrícula.",
@@ -730,7 +734,8 @@ def page_perks():
     steps = "".join(f'<li><h3>{e(t)}</h3><p>{e(d)}</p></li>' for t, d in STEPS)
     main = page_head(p, "Ventajas", "Por qué", "car-skyline.jpg", "nosotros",
                      "Confianza, coches que en Europa no encuentras y un servicio que se ocupa de cada trámite.",
-                     side=f'<p>Te preparamos un estudio gratis de tu coche en menos de 24 horas.</p><a class="btn" href="{p.contact()}">Pedir presupuesto</a>') + fields_html(p, with_drift=False) + f"""
+                     side=f'<p>Te preparamos un estudio gratis de tu coche en menos de 24 horas.</p><a class="btn" href="{p.contact()}">Pedir presupuesto</a>') + f"""
+<section class="section" style="padding-top:0"><div class="wrap"><h2 class="sr-only">Nuestras garantías</h2>{tiles_html()}</div></section>
 <section class="section">
   <div class="wrap">
     <div class="g12 head rv"><h2>Lo que en Europa no encuentras</h2><p>Buscamos en el mercado que mejor encaja con tu coche y tu presupuesto.</p></div>
@@ -906,7 +911,7 @@ def page_contact():
     <ul class="g12 origins">{pick_models(p)}</ul>
   </div>
 </section>
-<section class="section surface"><div class="wrap">{faq_rows("Antes de escribirnos")}</div></section>"""
+<section class="section surface"><div class="wrap">{faq_html("Antes de escribirnos")}</div></section>"""
     return p, layout(p, "Contacto | Pide tu estudio de importación gratis - Busco Tu Coche",
                      f"Pide tu estudio de importación gratis. WhatsApp y teléfono {PHONE_DISPLAY}. Respuesta en menos de 24 horas.",
                      "contacto", main, faq_jsonld())
@@ -914,7 +919,11 @@ def page_contact():
 
 def page_config():
     p = Page("configurador/index.html")
-    all_c = [(c[0], c[3]) for c in RACE_CARS] + [(n + " (drift)", img) for _, _, _, items in DRIFT_LEVELS for n, img, *_ in items]
+    all_c, seen = [], set()
+    for n, img in [(c[0], c[3]) for c in RACE_CARS] + [(n + " (drift)", img) for _, _, _, items in DRIFT_LEVELS for n, img, *_ in items]:
+        k = re.sub(r"\W|drift|spec", "", n.lower())
+        if k not in seen:
+            seen.add(k); all_c.append((n, img))
     picks = "".join(
         f'<label class="pick"><input type="radio" name="coche" value="{e(n)}" data-img="{p.asset("img/" + img.replace(".jpg", "-sm.jpg"))}"{" checked" if i == 0 else ""}>'
         f'{photo(p, img.replace(".jpg", "-sm.jpg"), "", sizes="25vw")}<span>{e(n)}</span></label>'

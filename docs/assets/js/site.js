@@ -112,21 +112,6 @@
     });
   }
 
-  /* ---------- Lo revisamos: tres distancias según el avance del scroll ---------- */
-  var zoom = document.querySelector(".zoom");
-  if (zoom && !reduce) {
-    var zTick = false;
-    var zUpdate = function () {
-      zTick = false;
-      var r = zoom.getBoundingClientRect(), run = r.height - window.innerHeight;
-      var prog = run > 0 ? Math.min(1, Math.max(0, -r.top / run)) : 1;
-      var st = prog < 0.3 ? "0" : prog < 0.65 ? "1" : "2";
-      if (zoom.getAttribute("data-stage") !== st) zoom.setAttribute("data-stage", st);
-    };
-    window.addEventListener("scroll", function () { if (!zTick) { zTick = true; requestAnimationFrame(zUpdate); } }, { passive: true });
-    window.addEventListener("resize", zUpdate); zUpdate();
-  } else if (zoom) { zoom.setAttribute("data-stage", "2"); }
-
   /* ---------- Filtros del catálogo ---------- */
   document.querySelectorAll("[data-filter-group]").forEach(function (group) {
     var id = group.getAttribute("data-filter-group");
@@ -209,5 +194,16 @@
         ", alerón: " + parts.aleron + ", motor: " + parts.motor + (gain > 0 ? ", +" + gain + " % de potencia estimada" : "") + ")");
     };
     cfg.addEventListener("change", update); update();
+  }
+  /* ---------- WhatsApp flotante: se aparta cuando taparía un botón ---------- */
+  var waFloat = document.querySelector(".wa-float");
+  if (waFloat && "IntersectionObserver" in window) {
+    var blockers = document.querySelectorAll("#finder, form .form-actions, .cta-band, .footer");
+    var onScreen = new Set();
+    var waIo = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) { if (en.isIntersecting) onScreen.add(en.target); else onScreen.delete(en.target); });
+      waFloat.classList.toggle("is-away", onScreen.size > 0);
+    }, { rootMargin: "0px 0px -0px 0px" });
+    blockers.forEach(function (b) { waIo.observe(b); });
   }
 })();
