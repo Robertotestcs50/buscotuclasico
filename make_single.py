@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Empaqueta toda la web (desde preview/) en un único HTML autocontenido para verla en cualquier dispositivo."""
 import base64
+import json
 import os
 import re
 
@@ -46,7 +47,7 @@ def rewrite(html, page_path):
         key = KEY_BY_DIR.get(os.path.dirname(norm) if norm != "index.html" else "", "inicio")
         return f'href="#{key}{query}"'
 
-    html = re.sub(r'href="([^"#:]*?index\.html)(\?[^"]*)?"', link, html)
+    html = re.sub(r'href="([^"#:]*?index\.html)(\?[^"#]*)?(?:#[^"]*)?"', link, html)
 
     def img(m):
         rel = m.group(1)
@@ -63,13 +64,13 @@ def rewrite(html, page_path):
 
 
 def main_of(html):
-    return re.search(r'<main id="main">(.*)</main>', html, re.S).group(1)
+    return re.search(r'<main id="main"[^>]*>(.*)</main>', html, re.S).group(1)
 
 
 def main():
     home = open(os.path.join(SRC, "index.html"), encoding="utf-8").read()
     header = re.search(r'(<a class="skip".*?</header>)', home, re.S).group(1)
-    footer = re.search(r'(<footer class="site-footer">.*?</a>)\s*<script', home, re.S).group(1)
+    footer = re.search(r"(<footer class=\"footer\">.*?</footer>)", home, re.S).group(1)
     header, footer = rewrite(header, "index.html"), rewrite(footer, "index.html")
     header = header.replace(' aria-current="page"', "")
 
@@ -81,10 +82,24 @@ def main():
         body = re.sub(r"<script>.*?</script>", "", body, flags=re.S)  # el router se encarga del relleno
         body = re.sub(r'(id|for)="f-', rf'\1="f-{key}-', body)            # ids únicos entre páginas
         body = rewrite(body, path)
+        def fix_json(m):
+            data = json.loads(m.group(2).replace("<\\/", "</"))
+            for c in data:
+                c["img"] = data_uri(os.path.normpath(os.path.join(SRC, os.path.dirname(path), c["img"])))
+                u = c["url"]
+                if "contacto/index.html" in u:
+                    q = u.split("?", 1)[1].split("#")[0] if "?" in u else ""
+                    c["url"] = "#contacto" + ("?" + q if q else "")
+                elif "drift-72h" in u:
+                    c["url"] = "#drift"
+            return m.group(1) + json.dumps(data, ensure_ascii=False).replace("</", "<\\/") + m.group(3)
+        body = re.sub(r'(<script type="application/json" id="cars-data">)(.*?)(</script>)', fix_json, body, flags=re.S)
+        body = re.sub(r'(<form class="finder" id="finder") action="[^"]*"', r'\1 action="#contacto"', body)
         sections.append(f'<section class="page" data-page="{key}" data-title="{title}" hidden>{body}</section>')
 
     css = open(os.path.join(SRC, "assets/css/site.css"), encoding="utf-8").read()
-    css = css.replace('url("../fonts/archivo.woff2")', f'url("{data_uri(os.path.join(SRC, "assets/fonts/archivo.woff2"))}")')
+    for font in ("imbue.woff2", "albert-sans.woff2"):
+        css = css.replace(f'url("../fonts/{font}")', f'url("{data_uri(os.path.join(SRC, "assets/fonts/" + font))}")')
     js = open(os.path.join(SRC, "assets/js/site.js"), encoding="utf-8").read()
     body_attrs = re.search(r"<body([^>]*)>", home).group(1)
     head_meta = re.search(r'(<meta charset.*?<meta name="theme-color"[^>]*>)', home, re.S).group(1)
@@ -117,6 +132,8 @@ def main():
     document.body.classList.remove("menu-open");
     window.scrollTo(0, 0);
   }
+  var fd = document.getElementById("finder");
+  if (fd) fd.addEventListener("submit", function (ev) { ev.preventDefault(); var v = fd.querySelector("input").value.trim(); if (v) location.hash = "#contacto?modelo=" + encodeURIComponent(v); });
   window.addEventListener("hashchange", show);
   show();
 })();
@@ -127,6 +144,7 @@ def main():
 <head>
 {head_meta}
 <title>Busco Tu Coche — vista completa</title>
+<script>document.documentElement.classList.add("js")</script>
 {favicon}
 <style>{css}</style>
 </head>
@@ -141,6 +159,16 @@ def main():
 </body>
 </html>
 """
+    # Cada foto se incrusta una sola vez y se reparte por la página al cargar
+    uris = {}
+    def keep(m):
+        u = m.group(1)
+        k = uris.setdefault(u, str(len(uris)))
+        return f'src="data:," data-k="{k}"'
+    out = re.sub(r'src="(data:image/jpeg;base64,[^"]+)"', keep, out)
+    table = "window.__IMG=" + json.dumps({k: u for u, k in uris.items()}) + ";" \
+            "document.querySelectorAll('img[data-k]').forEach(function(i){i.src=window.__IMG[i.getAttribute('data-k')];});"
+    out = out.replace("<main id=\"main\">", "<script>" + table.replace("document.querySelectorAll", "document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll") + "});</script>\n<main id=\"main\">", 1)
     with open(OUT, "w", encoding="utf-8") as f:
         f.write(out)
     print(OUT, round(len(out) / 1024), "KB")
